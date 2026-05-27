@@ -1,0 +1,545 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  counter_pharmacist
+  purchase_pharmacist
+  manager
+  super_admin
+}
+
+enum DrugDosageForm {
+  eye_drop
+  eye_ointment
+  oral_tablet
+  oral_syrup
+  injection
+  ointment
+  other
+}
+
+enum DrugPackUnit {
+  bottle
+  strip
+  vial
+  tube
+  box
+  sachet
+  unit
+}
+
+enum DrugSchedule {
+  otc
+  g
+  h
+  h1
+  e1
+}
+
+enum SupplierType {
+  distributor
+  manufacturer
+  wholesaler
+}
+
+enum PatientCategory {
+  bpl
+  general
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum DoctorType {
+  internal
+  external
+}
+
+enum PrescriptionSource {
+  internal
+  external
+}
+
+enum PaymentMode {
+  cash
+  upi
+  card
+  credit
+}
+
+enum BillStatus {
+  active
+  cancelled
+  returned
+}
+
+enum ReturnStatus {
+  pending_approval
+  approved
+  rejected
+}
+
+enum PurchaseReturnReason {
+  expired
+  damaged
+  short_expiry
+  quality
+  excess
+}
+
+enum GrnStatus {
+  draft
+  confirmed
+}
+
+enum PaymentStatus {
+  pending
+  partial
+  paid
+}
+
+enum SugamUploadStatus {
+  pending
+  uploaded
+  failed
+}
+
+enum ReportStatus {
+  queued
+  generating
+  ready
+  failed
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  role          UserRole
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  billsServed      SalesBill[]      @relation("ServedBy")
+  billsCancelled   SalesBill[]      @relation("CancelledBy")
+  grnsReceived     PurchaseGrn[]    @relation("ReceivedBy")
+  salesReturnInit  SalesReturn[]    @relation("SReturnInitBy")
+  salesReturnAppr  SalesReturn[]    @relation("SReturnApprBy")
+  purchReturnInit  PurchaseReturn[] @relation("PReturnInitBy")
+  purchReturnAppr  PurchaseReturn[] @relation("PReturnApprBy")
+  reports          Report[]
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Drug {
+  id                String         @id @default(uuid())
+  name              String
+  brandName         String?        @map("brand_name")
+  manufacturer      String?
+  category          String
+  dosageForm        DrugDosageForm @map("dosage_form")
+  strength          String?
+  packSize          String?        @map("pack_size")
+  packUnit          DrugPackUnit   @map("pack_unit")
+  schedule          DrugSchedule
+  hsnCode           String         @map("hsn_code")
+  gstRate           Decimal        @db.Decimal(5, 2) @map("gst_rate")
+  coldChainRequired Boolean        @default(false) @map("cold_chain_required")
+  coldChainMinTemp  Decimal?       @db.Decimal(4, 1) @map("cold_chain_min_temp")
+  coldChainMaxTemp  Decimal?       @db.Decimal(4, 1) @map("cold_chain_max_temp")
+  reorderLevel      Int            @default(10) @map("reorder_level")
+  barcode           String?
+  notes             String?
+  isActive          Boolean        @default(true) @map("is_active")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  discountConfig   DrugDiscountConfig?
+  inventoryBatches InventoryBatch[]
+  grnItems         PurchaseGrnItem[]
+  billItems        SalesBillItem[]
+  salesReturnItems SalesReturnItem[]
+  purchReturnItems PurchaseReturnItem[]
+  form17Entries    RegisterForm17[]
+  form18Entries    RegisterForm18[]
+
+  @@map("drugs")
+}
+
+model DrugDiscountConfig {
+  id                 String   @id @default(uuid())
+  drugId             String   @unique @map("drug_id")
+  drug               Drug     @relation(fields: [drugId], references: [id])
+  discountApplicable Boolean  @default(false) @map("discount_applicable")
+  bplDiscountPct     Decimal  @default(0) @db.Decimal(5, 2) @map("bpl_discount_pct")
+  generalDiscountPct Decimal  @default(0) @db.Decimal(5, 2) @map("general_discount_pct")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("drug_discount_configs")
+}
+
+model Supplier {
+  id               String       @id @default(uuid())
+  name             String
+  type             SupplierType
+  contactPerson    String?      @map("contact_person")
+  phone            String?
+  email            String?
+  address          String?
+  gstin            String?
+  drugLicenseNo    String?      @map("drug_license_no")
+  paymentTermsDays Int          @default(30) @map("payment_terms_days")
+  isActive         Boolean      @default(true) @map("is_active")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  grns             PurchaseGrn[]
+  purchaseReturns  PurchaseReturn[]
+  inventoryBatches InventoryBatch[]
+
+  @@map("suppliers")
+}
+
+model Doctor {
+  id             String     @id @default(uuid())
+  name           String
+  registrationNo String     @map("registration_no")
+  specialisation String     @default("Ophthalmology")
+  type           DoctorType
+  phone          String?
+  isActive       Boolean    @default(true) @map("is_active")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  patients Patient[]
+  bills    SalesBill[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id                String          @id @default(uuid())
+  hospitalPatientId String?         @map("hospital_patient_id")
+  name              String
+  age               Int?
+  gender            Gender?
+  phone             String?
+  address           String?
+  patientCategory   PatientCategory @map("patient_category")
+  bplCardNo         String?         @map("bpl_card_no")
+  doctorId          String?         @map("doctor_id")
+  doctor            Doctor?         @relation(fields: [doctorId], references: [id])
+  isActive          Boolean         @default(true) @map("is_active")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  bills SalesBill[]
+
+  @@map("patients")
+}
+
+model InventoryBatch {
+  id                  String       @id @default(uuid())
+  drugId              String       @map("drug_id")
+  drug                Drug         @relation(fields: [drugId], references: [id])
+  batchNo             String       @map("batch_no")
+  manufacturedDate    DateTime?    @map("manufactured_date")
+  expiryDate          DateTime     @map("expiry_date")
+  mrpPerUnit          Decimal      @db.Decimal(10, 2) @map("mrp_per_unit")
+  purchaseRatePerUnit Decimal      @db.Decimal(10, 2) @map("purchase_rate_per_unit")
+  quantityReceived    Int          @map("quantity_received")
+  quantityAvailable   Int          @map("quantity_available")
+  supplierId          String?      @map("supplier_id")
+  supplier            Supplier?    @relation(fields: [supplierId], references: [id])
+  grnId               String?      @map("grn_id")
+  grn                 PurchaseGrn? @relation(fields: [grnId], references: [id])
+  isQuarantined       Boolean      @default(false) @map("is_quarantined")
+  quarantineReason    String?      @map("quarantine_reason")
+  createdAt           DateTime     @default(now()) @map("created_at")
+
+  billItems        SalesBillItem[]
+  salesReturnItems SalesReturnItem[]
+  purchReturnItems PurchaseReturnItem[]
+
+  @@map("inventory_batches")
+}
+
+model PurchaseGrn {
+  id                  String        @id @default(uuid())
+  grnNumber           String        @unique @map("grn_number")
+  supplierId          String        @map("supplier_id")
+  supplier            Supplier      @relation(fields: [supplierId], references: [id])
+  supplierInvoiceNo   String        @map("supplier_invoice_no")
+  supplierInvoiceDate DateTime      @map("supplier_invoice_date")
+  receivedDate        DateTime      @map("received_date")
+  receivedBy          String        @map("received_by")
+  receivedByUser      User          @relation("ReceivedBy", fields: [receivedBy], references: [id])
+  totalAmount         Decimal       @db.Decimal(12, 2) @map("total_amount")
+  totalGstAmount      Decimal       @db.Decimal(12, 2) @map("total_gst_amount")
+  totalDiscountAmount Decimal       @db.Decimal(12, 2) @map("total_discount_amount")
+  netPayable          Decimal       @db.Decimal(12, 2) @map("net_payable")
+  paymentStatus       PaymentStatus @default(pending) @map("payment_status")
+  notes               String?
+  status              GrnStatus     @default(draft)
+  createdAt           DateTime      @default(now()) @map("created_at")
+
+  items            PurchaseGrnItem[]
+  inventoryBatches InventoryBatch[]
+  purchaseReturns  PurchaseReturn[]
+  form17Entries    RegisterForm17[]
+
+  @@map("purchase_grns")
+}
+
+model PurchaseGrnItem {
+  id                  String      @id @default(uuid())
+  grnId               String      @map("grn_id")
+  grn                 PurchaseGrn @relation(fields: [grnId], references: [id])
+  drugId              String      @map("drug_id")
+  drug                Drug        @relation(fields: [drugId], references: [id])
+  batchNo             String      @map("batch_no")
+  manufacturedDate    DateTime?   @map("manufactured_date")
+  expiryDate          DateTime    @map("expiry_date")
+  quantity            Int
+  freeQuantity        Int         @default(0) @map("free_quantity")
+  mrpPerUnit          Decimal     @db.Decimal(10, 2) @map("mrp_per_unit")
+  purchaseRatePerUnit Decimal     @db.Decimal(10, 2) @map("purchase_rate_per_unit")
+  tradeDiscountPct    Decimal     @default(0) @db.Decimal(5, 2) @map("trade_discount_pct")
+  gstRate             Decimal     @db.Decimal(5, 2) @map("gst_rate")
+  gstAmount           Decimal     @db.Decimal(10, 2) @map("gst_amount")
+  lineTotal           Decimal     @db.Decimal(10, 2) @map("line_total")
+  notes               String?
+
+  @@map("purchase_grn_items")
+}
+
+model SalesBill {
+  id                  String             @id @default(uuid())
+  billNumber          String             @unique @map("bill_number")
+  billDate            DateTime           @map("bill_date")
+  patientId           String             @map("patient_id")
+  patient             Patient            @relation(fields: [patientId], references: [id])
+  patientCategory     String             @map("patient_category")
+  doctorId            String?            @map("doctor_id")
+  doctor              Doctor?            @relation(fields: [doctorId], references: [id])
+  prescriptionNo      String?            @map("prescription_no")
+  prescriptionDate    DateTime?          @map("prescription_date")
+  prescriptionSource  PrescriptionSource @map("prescription_source")
+  servedBy            String             @map("served_by")
+  servedByUser        User               @relation("ServedBy", fields: [servedBy], references: [id])
+  subtotalMrp         Decimal            @db.Decimal(12, 2) @map("subtotal_mrp")
+  totalDiscountAmount Decimal            @db.Decimal(12, 2) @map("total_discount_amount")
+  taxableAmount       Decimal            @db.Decimal(12, 2) @map("taxable_amount")
+  totalGstAmount      Decimal            @db.Decimal(12, 2) @map("total_gst_amount")
+  netAmount           Decimal            @db.Decimal(12, 2) @map("net_amount")
+  paymentMode         PaymentMode        @map("payment_mode")
+  paymentReference    String?            @map("payment_reference")
+  status              BillStatus         @default(active)
+  cancellationReason  String?            @map("cancellation_reason")
+  cancelledBy         String?            @map("cancelled_by")
+  cancelledByUser     User?              @relation("CancelledBy", fields: [cancelledBy], references: [id])
+  createdAt           DateTime           @default(now()) @map("created_at")
+
+  items         SalesBillItem[]
+  salesReturns  SalesReturn[]
+  form18Entries RegisterForm18[]
+
+  @@map("sales_bills")
+}
+
+model SalesBillItem {
+  id                 String         @id @default(uuid())
+  billId             String         @map("bill_id")
+  bill               SalesBill      @relation(fields: [billId], references: [id])
+  drugId             String         @map("drug_id")
+  drug               Drug           @relation(fields: [drugId], references: [id])
+  batchId            String         @map("batch_id")
+  batch              InventoryBatch @relation(fields: [batchId], references: [id])
+  drugName           String         @map("drug_name")
+  batchNo            String         @map("batch_no")
+  expiryDate         DateTime       @map("expiry_date")
+  hsnCode            String         @map("hsn_code")
+  schedule           String
+  quantity           Int
+  mrpPerUnit         Decimal        @db.Decimal(10, 2) @map("mrp_per_unit")
+  discountPctApplied Decimal        @default(0) @db.Decimal(5, 2) @map("discount_pct_applied")
+  discountAmount     Decimal        @default(0) @db.Decimal(10, 2) @map("discount_amount")
+  taxableAmount      Decimal        @db.Decimal(10, 2) @map("taxable_amount")
+  gstRate            Decimal        @db.Decimal(5, 2) @map("gst_rate")
+  gstAmount          Decimal        @db.Decimal(10, 2) @map("gst_amount")
+  lineNetAmount      Decimal        @db.Decimal(10, 2) @map("line_net_amount")
+
+  returnItems SalesReturnItem[]
+
+  @@map("sales_bill_items")
+}
+
+model SalesReturn {
+  id                String       @id @default(uuid())
+  returnNumber      String       @unique @map("return_number")
+  originalBillId    String       @map("original_bill_id")
+  originalBill      SalesBill    @relation(fields: [originalBillId], references: [id])
+  returnDate        DateTime     @map("return_date")
+  returnReason      String       @map("return_reason")
+  initiatedBy       String       @map("initiated_by")
+  initiatedByUser   User         @relation("SReturnInitBy", fields: [initiatedBy], references: [id])
+  approvedBy        String?      @map("approved_by")
+  approvedByUser    User?        @relation("SReturnApprBy", fields: [approvedBy], references: [id])
+  approvedAt        DateTime?    @map("approved_at")
+  rejectionReason   String?      @map("rejection_reason")
+  status            ReturnStatus @default(pending_approval)
+  totalRefundAmount Decimal      @db.Decimal(12, 2) @map("total_refund_amount")
+  notes             String?
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  items SalesReturnItem[]
+
+  @@map("sales_returns")
+}
+
+model SalesReturnItem {
+  id               String         @id @default(uuid())
+  returnId         String         @map("return_id")
+  return           SalesReturn    @relation(fields: [returnId], references: [id])
+  billItemId       String         @map("bill_item_id")
+  billItem         SalesBillItem  @relation(fields: [billItemId], references: [id])
+  drugId           String         @map("drug_id")
+  drug             Drug           @relation(fields: [drugId], references: [id])
+  batchId          String         @map("batch_id")
+  batch            InventoryBatch @relation(fields: [batchId], references: [id])
+  quantityReturned Int            @map("quantity_returned")
+  refundAmount     Decimal        @db.Decimal(10, 2) @map("refund_amount")
+  returnToStock    Boolean        @default(true) @map("return_to_stock")
+
+  @@map("sales_return_items")
+}
+
+model PurchaseReturn {
+  id                String               @id @default(uuid())
+  returnNumber      String               @unique @map("return_number")
+  originalGrnId     String               @map("original_grn_id")
+  originalGrn       PurchaseGrn          @relation(fields: [originalGrnId], references: [id])
+  supplierId        String               @map("supplier_id")
+  supplier          Supplier             @relation(fields: [supplierId], references: [id])
+  returnDate        DateTime             @map("return_date")
+  returnReason      PurchaseReturnReason @map("return_reason")
+  initiatedBy       String               @map("initiated_by")
+  initiatedByUser   User                 @relation("PReturnInitBy", fields: [initiatedBy], references: [id])
+  approvedBy        String?              @map("approved_by")
+  approvedByUser    User?                @relation("PReturnApprBy", fields: [approvedBy], references: [id])
+  approvedAt        DateTime?            @map("approved_at")
+  rejectionReason   String?              @map("rejection_reason")
+  status            ReturnStatus         @default(pending_approval)
+  totalReturnAmount Decimal              @db.Decimal(12, 2) @map("total_return_amount")
+  notes             String?
+  createdAt         DateTime             @default(now()) @map("created_at")
+
+  items PurchaseReturnItem[]
+
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id               String         @id @default(uuid())
+  returnId         String         @map("return_id")
+  return           PurchaseReturn @relation(fields: [returnId], references: [id])
+  drugId           String         @map("drug_id")
+  drug             Drug           @relation(fields: [drugId], references: [id])
+  batchId          String         @map("batch_id")
+  batch            InventoryBatch @relation(fields: [batchId], references: [id])
+  quantityReturned Int            @map("quantity_returned")
+  returnValue      Decimal        @db.Decimal(10, 2) @map("return_value")
+
+  @@map("purchase_return_items")
+}
+
+model RegisterForm17 {
+  id                  String      @id @default(uuid())
+  entryDate           DateTime    @map("entry_date")
+  grnId               String      @map("grn_id")
+  grn                 PurchaseGrn @relation(fields: [grnId], references: [id])
+  drugId              String      @map("drug_id")
+  drug                Drug        @relation(fields: [drugId], references: [id])
+  drugName            String      @map("drug_name")
+  schedule            String
+  supplierName        String      @map("supplier_name")
+  supplierDlNo        String?     @map("supplier_dl_no")
+  supplierInvoiceNo   String      @map("supplier_invoice_no")
+  supplierInvoiceDate DateTime    @map("supplier_invoice_date")
+  batchNo             String      @map("batch_no")
+  manufacturedDate    DateTime?   @map("manufactured_date")
+  expiryDate          DateTime    @map("expiry_date")
+  quantityReceived    Int         @map("quantity_received")
+  mrp                 Decimal     @db.Decimal(10, 2)
+  purchaseRate        Decimal     @db.Decimal(10, 2) @map("purchase_rate")
+
+  @@map("register_form17")
+}
+
+model RegisterForm18 {
+  id                String            @id @default(uuid())
+  entryDate         DateTime          @map("entry_date")
+  billId            String            @map("bill_id")
+  bill              SalesBill         @relation(fields: [billId], references: [id])
+  drugId            String            @map("drug_id")
+  drug              Drug              @relation(fields: [drugId], references: [id])
+  drugName          String            @map("drug_name")
+  schedule          String
+  batchNo           String            @map("batch_no")
+  quantitySold      Int               @map("quantity_sold")
+  patientName       String            @map("patient_name")
+  patientAge        Int?              @map("patient_age")
+  patientGender     String?           @map("patient_gender")
+  doctorName        String            @map("doctor_name")
+  doctorRegNo       String            @map("doctor_reg_no")
+  prescriptionNo    String?           @map("prescription_no")
+  prescriptionDate  DateTime?         @map("prescription_date")
+  isH1              Boolean           @default(false) @map("is_h1")
+  sugamUploadStatus SugamUploadStatus @default(pending) @map("sugam_upload_status")
+
+  @@map("register_form18")
+}
+
+model Report {
+  id              String       @id @default(uuid())
+  reportDefId     String       @map("report_def_id")
+  reportName      String       @map("report_name")
+  category        String
+  status          ReportStatus @default(queued)
+  requestedBy     String?      @map("requested_by")
+  requestedByUser User?        @relation(fields: [requestedBy], references: [id])
+  requestedAt     DateTime     @default(now()) @map("requested_at")
+  params          Json
+  periodLabel     String       @map("period_label")
+  format          String
+  filePath        String?      @map("file_path")
+  fileSizeBytes   Int?         @map("file_size_bytes")
+  generatedAt     DateTime?    @map("generated_at")
+  errorMessage    String?      @map("error_message")
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  tableName  String   @map("table_name")
+  recordId   String   @map("record_id")
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
