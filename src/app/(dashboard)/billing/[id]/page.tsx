@@ -10,6 +10,7 @@ import { LifecycleBanner } from '@/components/shared/LifecycleBanner'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ConfirmGate } from '@/components/shared/ConfirmGate'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { BillPDF, type PharmacyInfo } from '@/components/print/BillPDF'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -116,16 +117,22 @@ export default function BillDetailPage() {
   const [loading, setLoading] = useState(true)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [pharmacy, setPharmacy] = useState<PharmacyInfo | null>(null)
 
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    fetch(`/api/billing/bills/${id}`)
-      .then(async (res) => {
+    Promise.all([
+      fetch(`/api/billing/bills/${id}`).then(async (res) => {
         if (!res.ok) throw new Error('Failed to load bill')
         return res.json()
+      }),
+      fetch('/api/settings/pharmacy').then((r) => r.ok ? r.json() : null),
+    ])
+      .then(([billData, pharmacyData]) => {
+        setBill(billData)
+        if (pharmacyData) setPharmacy(pharmacyData)
       })
-      .then(setBill)
       .catch(() => toast.error('Failed to load bill details'))
       .finally(() => setLoading(false))
   }, [id])
@@ -373,10 +380,41 @@ export default function BillDetailPage() {
           </div>
         )}
 
-        {/* Print footer */}
-        <div className="hidden print:block mt-8 text-xs text-slate-400 text-center border-t pt-4">
-          <p>HCEH Pharmacy — {bill.billNumber} — Generated {format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
-          <p>This is a computer-generated bill.</p>
+        {/* Print layout — invisible on screen, renders as the A5 bill when printing */}
+        <div className="hidden print:block">
+          <BillPDF
+            pharmacy={pharmacy ?? undefined}
+            bill={{
+              billNumber:    bill.billNumber,
+              createdAt:     bill.createdAt,
+              paymentMode:   bill.paymentMode,
+              prescriptionNo: bill.prescriptionNo,
+              patient: {
+                name:              bill.patient?.name ?? 'Walk-in Patient',
+                hospitalPatientId: bill.patient?.hospitalPatientId ?? '',
+                age:               bill.patient?.age,
+                gender:            bill.patient?.gender,
+                patientCategory:   bill.patient?.patientCategory ?? 'general',
+              },
+              doctor: bill.doctor ? { name: bill.doctor.name } : undefined,
+              items: bill.items.map((item) => ({
+                drugName:    item.drugName,
+                schedule:    item.schedule,
+                batchNo:     item.batchNo,
+                expiryDate:  item.expiryDate
+                  ? format(new Date(item.expiryDate), 'MM/yy')
+                  : '',
+                quantity:    item.quantity,
+                mrpPerUnit:  item.mrpPerUnit,
+                discountPct: item.discountPct,
+                netAmount:   item.netAmount,
+              })),
+              grossAmount:   bill.subtotalMrp,
+              totalDiscount: bill.totalDiscount,
+              totalGst:      bill.totalGst,
+              netPayable:    bill.totalAmount,
+            }}
+          />
         </div>
       </div>
 

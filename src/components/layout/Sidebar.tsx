@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['manager', 'super_admin'] },
   { href: '/settings/users', label: 'Users', icon: Settings, roles: ['super_admin'] },
   { href: '/settings/discounts', label: 'Discounts', icon: Settings, roles: ['manager', 'super_admin'] },
+  { href: '/settings/pharmacy', label: 'Pharmacy Profile', icon: Settings, roles: ['manager', 'super_admin'] },
 ]
 
 interface SidebarProps {

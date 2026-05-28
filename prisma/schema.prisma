@@ -529,6 +529,24 @@ model Report {
   @@map("reports")
 }
 
+model PharmacySettings {
+  id            String   @id @default("singleton")
+  pharmacyName  String   @default("HCEH Eye Hospital Pharmacy") @map("pharmacy_name")
+  address       String?
+  city          String?
+  state         String?
+  pincode       String?
+  phone         String?
+  email         String?
+  gstin         String?
+  drugLicenseNo String?  @map("drug_license_no")
+  cinNo         String?  @map("cin_no")
+  panNo         String?  @map("pan_no")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("pharmacy_settings")
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
