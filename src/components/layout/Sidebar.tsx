@@ -16,7 +16,47 @@ import {
   BarChart3,
   Settings,
   Eye,
+  GitCommit,
 } from 'lucide-react'
+
+// ─── Build info footer ────────────────────────────────────────────────────────
+
+const COMMIT      = process.env.NEXT_PUBLIC_BUILD_COMMIT      ?? 'dev'
+const COMMIT_DATE = process.env.NEXT_PUBLIC_BUILD_COMMIT_DATE ?? ''
+const BUILD_TIME  = process.env.NEXT_PUBLIC_BUILD_TIME        ?? ''
+
+function formatLocal(iso: string) {
+  if (!iso) return '—'
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(iso))
+  } catch { return iso }
+}
+
+function BuildInfo() {
+  return (
+    <div className="text-[10px] text-slate-500 space-y-1 leading-snug">
+      <div className="flex items-center gap-1.5">
+        <GitCommit className="w-3 h-3 flex-shrink-0 text-slate-600" />
+        <span className="font-mono text-slate-300">{COMMIT}</span>
+      </div>
+      {COMMIT_DATE && (
+        <div title={`Commit: ${COMMIT_DATE}`}>
+          <span className="text-slate-600">Committed </span>
+          <span className="text-slate-400">{formatLocal(COMMIT_DATE)}</span>
+        </div>
+      )}
+      {BUILD_TIME && (
+        <div title={`Built: ${BUILD_TIME}`}>
+          <span className="text-slate-600">Built </span>
+          <span className="text-slate-400">{formatLocal(BUILD_TIME)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface NavItem {
   href: string
@@ -86,10 +126,11 @@ export function Sidebar({ userRole }: SidebarProps) {
         })}
       </nav>
 
-      <div className="px-4 py-3 border-t border-slate-700">
-        <p className="text-xs text-slate-500">
+      <div className="px-4 py-3 border-t border-slate-700 space-y-2">
+        <p className="text-xs text-slate-400">
           {userRole.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
         </p>
+        <BuildInfo />
       </div>
     </aside>
   )
