@@ -3,10 +3,23 @@ config({ path: '.env.local' })
 
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { neonConfig } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
+import ws from 'ws'
 import bcrypt from 'bcryptjs'
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
-const prisma = new PrismaClient({ adapter })
+function createClient(): PrismaClient {
+  const url = process.env.DATABASE_URL!
+  if (url?.includes('neon.tech')) {
+    neonConfig.webSocketConstructor = ws
+    const adapter = new PrismaNeon({ connectionString: url })
+    return new PrismaClient({ adapter })
+  }
+  const adapter = new PrismaPg({ connectionString: url })
+  return new PrismaClient({ adapter })
+}
+
+const prisma = createClient()
 
 async function main() {
   console.log('Seeding database...')
