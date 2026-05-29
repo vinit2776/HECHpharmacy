@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -29,6 +31,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@react-pdf/renderer": "^4.5.1",
+    "@types/ws": "^8.18.1",
     "@zxing/library": "^0.23.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
@@ -50,6 +53,7 @@
     "react-hook-form": "^7.76.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },
