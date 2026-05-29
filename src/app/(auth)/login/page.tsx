@@ -33,7 +33,10 @@ export default function LoginPage() {
     if (result?.error) {
       setError('Invalid email or password')
     } else {
-      router.push('/dashboard')
+      // Full page reload so the server reads the newly-set session cookie.
+      // router.push() in NextAuth v5 beta sometimes races the cookie before
+      // the server component can see it.
+      window.location.href = '/dashboard'
     }
   }
 
