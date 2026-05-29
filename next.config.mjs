@@ -22,9 +22,10 @@ console.log(`    Date   : ${commitDate}`)
 console.log(`    Built  : ${buildTime}\n`)
 
 const nextConfig = {
-  // pg uses native addons — keep it external so Node.js resolves it
-  // from node_modules at runtime instead of bundling it into chunks.
-  serverExternalPackages: ['pg', 'pg-native'],
+  // pg has native addons — keep it external so Node.js resolves it
+  // from node_modules at runtime. Also exclude the Neon packages so
+  // any residual WebSocket code isn't bundled into server chunks.
+  serverExternalPackages: ['pg', 'pg-native', '@neondatabase/serverless', '@prisma/adapter-neon'],
 
   env: {
     NEXT_PUBLIC_BUILD_COMMIT:      commit,
