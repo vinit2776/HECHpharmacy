@@ -22,10 +22,9 @@ console.log(`    Date   : ${commitDate}`)
 console.log(`    Built  : ${buildTime}\n`)
 
 const nextConfig = {
-  // Prevent Next.js from bundling these packages — they must be resolved at
-  // runtime by Node.js so native addons (e.g. ws masking) work correctly in
-  // Vercel serverless functions and locally.
-  serverExternalPackages: ['ws', 'pg', 'pg-native', '@neondatabase/serverless'],
+  // pg uses native addons — keep it external so Node.js resolves it
+  // from node_modules at runtime instead of bundling it into chunks.
+  serverExternalPackages: ['pg', 'pg-native'],
 
   env: {
     NEXT_PUBLIC_BUILD_COMMIT:      commit,
