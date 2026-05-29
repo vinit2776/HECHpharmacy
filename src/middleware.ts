@@ -1,16 +1,10 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config'
 
-// NextAuth v5 middleware: use auth() instead of getToken().
-// v5 uses JWE-encrypted tokens; the old next-auth/jwt getToken()
-// cannot decode them and always returned null → redirect loop.
-export const middleware = auth((req) => {
-  const { auth: session, nextUrl } = req as any
-  if (!session && !nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/login', req.url))
-  }
-  return NextResponse.next()
-})
+// Middleware runs in Vercel's Edge Runtime — must NOT import Prisma or pg.
+// Use the edge-compatible authConfig (no Credentials provider, no DB).
+// The `authorized` callback in authConfig handles the redirect logic.
+export const { auth: middleware } = NextAuth(authConfig)
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],

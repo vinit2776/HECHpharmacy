@@ -2,8 +2,12 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { authConfig } from './auth.config'
 
+// Full auth config — Node.js runtime only (uses Prisma/pg for authorize).
+// Middleware uses auth.config.ts (edge-compatible, no DB).
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -22,21 +26,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role = (user as any).role
-        token.id = user.id
-      }
-      return token
-    },
-    session({ session, token }) {
-      session.user.role = token.role as string
-      session.user.id = (token.id ?? token.sub) as string
-      return session
-    },
-  },
-  pages: { signIn: '/login' },
-  session: { strategy: 'jwt' },
-  trustHost: true,
 })
