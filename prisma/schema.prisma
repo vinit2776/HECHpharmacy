@@ -625,8 +625,27 @@ model SupportTicket {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  attachments TicketAttachment[]
+
   @@index([status])
   @@index([reporterId])
   @@index([createdAt])
   @@map("support_tickets")
+}
+
+model TicketAttachment {
+  id          String        @id @default(uuid())
+  ticketId    String        @map("ticket_id")
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  filename    String
+  contentType String        @map("content_type")
+  sizeBytes   Int           @map("size_bytes")
+  // Raw file bytes stored as Postgres BYTEA. Keep separate from listing
+  // queries — always SELECT explicit columns to avoid pulling blobs.
+  data        Bytes
+  uploadedBy  String        @map("uploaded_by")
+  uploadedAt  DateTime      @default(now()) @map("uploaded_at")
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
 }

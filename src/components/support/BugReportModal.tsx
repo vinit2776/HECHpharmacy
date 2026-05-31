@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,18 @@ const EMPTY: FormState = {
   actualBehavior:   '',
 }
 
+// File upload constants — must match server-side limits in
+// src/app/api/tickets/[id]/attachments/route.ts
+const MAX_FILES        = 3
+const MAX_FILE_BYTES   = 5 * 1024 * 1024
+const ALLOWED_MIME_RE  = /^image\/(png|jpe?g|gif|webp)$|^application\/pdf$/
+
+function fmtBytes(n: number) {
+  if (n < 1024)         return `${n} B`
+  if (n < 1024 * 1024)  return `${(n / 1024).toFixed(0)} KB`
+  return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
 export function BugReportModal({
   open,
   onOpenChange,
@@ -58,14 +70,54 @@ export function BugReportModal({
   const [form, setForm]       = useState<FormState>(EMPTY)
   const [saving, setSaving]   = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [files, setFiles]     = useState<File[]>([])
+  const fileInputRef          = useRef<HTMLInputElement>(null)
 
   // Reset whenever closed so reopening starts fresh
   useEffect(() => {
     if (!open) {
       setForm(EMPTY)
       setShowMore(false)
+      setFiles([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }, [open])
+
+  const handleFilesPicked = (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return
+
+    const next = [...files]
+    const rejected: string[] = []
+
+    for (const f of Array.from(picked)) {
+      if (next.length >= MAX_FILES) {
+        rejected.push(`${f.name}: limit of ${MAX_FILES} files reached`)
+        continue
+      }
+      if (!ALLOWED_MIME_RE.test(f.type)) {
+        rejected.push(`${f.name}: only PNG, JPEG, GIF, WebP, PDF allowed`)
+        continue
+      }
+      if (f.size > MAX_FILE_BYTES) {
+        rejected.push(`${f.name}: ${fmtBytes(f.size)} exceeds ${fmtBytes(MAX_FILE_BYTES)} limit`)
+        continue
+      }
+      // Skip exact duplicates (same name + size)
+      if (next.some((existing) => existing.name === f.name && existing.size === f.size)) continue
+
+      next.push(f)
+    }
+
+    setFiles(next)
+    if (rejected.length > 0) toast.warning(rejected.join(' • '))
+
+    // Reset input so picking the same file again triggers onChange
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const removeFile = (idx: number) => {
+    setFiles((current) => current.filter((_, i) => i !== idx))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,9 +161,40 @@ export function BugReportModal({
       }
 
       const ticket = await res.json()
-      toast.success(`Ticket ${ticket.ticketNo} submitted. We'll review it shortly.`, {
-        duration: 5000,
-      })
+
+      // Upload attachments (if any) in a follow-up multipart request.
+      // The ticket exists at this point even if uploads fail — user can
+      // re-upload from the detail page.
+      let uploadWarning: string | null = null
+      if (files.length > 0) {
+        const fd = new FormData()
+        files.forEach((f) => fd.append('files', f))
+
+        try {
+          const upRes = await fetch(`/api/tickets/${ticket.id}/attachments`, {
+            method: 'POST',
+            body:   fd,
+          })
+          if (!upRes.ok) {
+            const upBody = await upRes.json().catch(() => ({}))
+            uploadWarning = upBody.error ?? `Attachment upload failed (${upRes.status})`
+          }
+        } catch (e: any) {
+          uploadWarning = e.message ?? 'Attachment upload failed'
+        }
+      }
+
+      if (uploadWarning) {
+        toast.warning(
+          `Ticket ${ticket.ticketNo} created, but attachments failed: ${uploadWarning}. You can re-upload from the ticket page.`,
+          { duration: 8000 },
+        )
+      } else {
+        const fileNote = files.length > 0 ? ` (${files.length} file${files.length === 1 ? '' : 's'} attached)` : ''
+        toast.success(`Ticket ${ticket.ticketNo} submitted${fileNote}. We'll review it shortly.`, {
+          duration: 5000,
+        })
+      }
       onOpenChange(false)
     } catch (err: any) {
       toast.error(err.message ?? 'Could not submit ticket')
@@ -242,6 +325,67 @@ export function BugReportModal({
               </div>
             </div>
           )}
+
+          {/* ── Attachments ─────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <Label className="text-sm">
+              Attachments <span className="text-slate-400 font-normal">(optional — screenshot of the issue is super helpful)</span>
+            </Label>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFilesPicked(e.target.files)}
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={files.length >= MAX_FILES}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md border border-dashed border-slate-300 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              <Paperclip className="w-4 h-4" />
+              {files.length === 0
+                ? 'Attach screenshots or PDFs'
+                : files.length >= MAX_FILES
+                  ? `Maximum ${MAX_FILES} files attached`
+                  : `Add another file (${files.length}/${MAX_FILES})`}
+            </button>
+
+            {files.length > 0 && (
+              <ul className="space-y-1.5">
+                {files.map((f, idx) => {
+                  const isImage = f.type.startsWith('image/')
+                  const Icon = isImage ? ImageIcon : FileText
+                  return (
+                    <li
+                      key={`${f.name}-${idx}`}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-sm"
+                    >
+                      <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="flex-1 truncate font-medium text-slate-700">{f.name}</span>
+                      <span className="text-xs text-slate-500 flex-shrink-0">{fmtBytes(f.size)}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(idx)}
+                        className="text-slate-400 hover:text-red-600 flex-shrink-0"
+                        title="Remove"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+
+            <p className="text-[11px] text-slate-400">
+              Up to {MAX_FILES} files, max {fmtBytes(MAX_FILE_BYTES)} each. PNG, JPEG, GIF, WebP, or PDF only.
+            </p>
+          </div>
 
           <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-md px-3 py-2">
             We&apos;ll automatically include: current page URL, your browser, screen

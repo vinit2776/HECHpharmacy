@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
-import { Loader2, ChevronLeft, Bug, Monitor, GitCommit, Clock, User, Save } from 'lucide-react'
+import {
+  Loader2, ChevronLeft, Bug, Monitor, GitCommit, Clock, User, Save,
+  Paperclip, X, FileText, Image as ImageIcon, Download, Trash2,
+} from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -55,6 +58,25 @@ interface Ticket {
   updatedAt:        string
 }
 
+interface Attachment {
+  id:          string
+  filename:    string
+  contentType: string
+  sizeBytes:   number
+  uploadedBy:  string
+  uploadedAt:  string
+}
+
+const MAX_FILES        = 3
+const MAX_FILE_BYTES   = 5 * 1024 * 1024
+const ALLOWED_MIME_RE  = /^image\/(png|jpe?g|gif|webp)$|^application\/pdf$/
+
+function fmtBytes(n: number) {
+  if (n < 1024)         return `${n} B`
+  if (n < 1024 * 1024)  return `${(n / 1024).toFixed(0)} KB`
+  return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
 const statusColor: Record<string, string> = {
   open:          'bg-blue-100 text-blue-800 border-blue-200',
   in_progress:   'bg-amber-100 text-amber-800 border-amber-200',
@@ -101,7 +123,13 @@ export default function TicketDetailPage() {
   const [adminNotes, setAdminNotes]     = useState('')
   const [resolution, setResolution]     = useState('')
 
+  const [attachments, setAttachments]   = useState<Attachment[]>([])
+  const [uploading, setUploading]       = useState(false)
+  const attachInputRef                  = useRef<HTMLInputElement>(null)
+
   const isAdmin = role === 'manager' || role === 'super_admin'
+  const canEditAttachments =
+    isAdmin || (ticket && ticket.status !== 'resolved' && ticket.status !== 'closed')
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -131,6 +159,88 @@ export default function TicketDetailPage() {
   }, [id])
 
   useEffect(() => { fetchTicket() }, [fetchTicket])
+
+  const fetchAttachments = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tickets/${id}/attachments`)
+      if (res.ok) setAttachments(await res.json())
+    } catch {
+      // non-fatal — ticket detail still loads
+    }
+  }, [id])
+
+  useEffect(() => { fetchAttachments() }, [fetchAttachments])
+
+  const handleUploadFiles = async (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return
+
+    // Client-side validation matching server limits — give immediate feedback
+    const fileArray = Array.from(picked)
+    const rejected: string[] = []
+    const accepted: File[] = []
+    const remainingSlots = MAX_FILES - attachments.length
+
+    for (const f of fileArray) {
+      if (accepted.length >= remainingSlots) {
+        rejected.push(`${f.name}: only ${remainingSlots} slot${remainingSlots === 1 ? '' : 's'} remaining`)
+        continue
+      }
+      if (!ALLOWED_MIME_RE.test(f.type)) {
+        rejected.push(`${f.name}: only PNG, JPEG, GIF, WebP, PDF allowed`)
+        continue
+      }
+      if (f.size > MAX_FILE_BYTES) {
+        rejected.push(`${f.name}: ${fmtBytes(f.size)} exceeds ${fmtBytes(MAX_FILE_BYTES)} limit`)
+        continue
+      }
+      accepted.push(f)
+    }
+
+    if (rejected.length > 0) toast.warning(rejected.join(' • '))
+    if (accepted.length === 0) {
+      if (attachInputRef.current) attachInputRef.current.value = ''
+      return
+    }
+
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      accepted.forEach((f) => fd.append('files', f))
+
+      const res = await fetch(`/api/tickets/${id}/attachments`, {
+        method: 'POST',
+        body:   fd,
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Upload failed (${res.status})`)
+      }
+
+      await fetchAttachments()
+      toast.success(`Uploaded ${accepted.length} file${accepted.length === 1 ? '' : 's'}`)
+    } catch (e: any) {
+      toast.error(e.message ?? 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (attachInputRef.current) attachInputRef.current.value = ''
+    }
+  }
+
+  const handleDeleteAttachment = async (attId: string, filename: string) => {
+    if (!confirm(`Delete "${filename}"?`)) return
+    try {
+      const res = await fetch(`/api/tickets/${id}/attachments/${attId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `Delete failed (${res.status})`)
+      }
+      setAttachments((current) => current.filter((a) => a.id !== attId))
+      toast.success('Attachment deleted')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Delete failed')
+    }
+  }
 
   const handleSave = async () => {
     if (!ticket) return
@@ -237,6 +347,127 @@ export default function TicketDetailPage() {
                     <MultilineBlock text={ticket.actualBehavior} />
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Attachments ───────────────────────────────────────────── */}
+          {(attachments.length > 0 || canEditAttachments) && (
+            <div className="bg-white rounded-lg border border-slate-200 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-slate-500" />
+                  Attachments
+                  {attachments.length > 0 && (
+                    <span className="text-xs text-slate-500 font-normal">
+                      ({attachments.length}/{MAX_FILES})
+                    </span>
+                  )}
+                </h3>
+
+                {canEditAttachments && (
+                  <>
+                    <input
+                      ref={attachInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,application/pdf"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleUploadFiles(e.target.files)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploading || attachments.length >= MAX_FILES}
+                      onClick={() => attachInputRef.current?.click()}
+                    >
+                      {uploading ? (
+                        <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Uploading…</>
+                      ) : (
+                        <><Paperclip className="w-3.5 h-3.5 mr-1.5" /> Add Files</>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {attachments.length === 0 ? (
+                <p className="text-sm text-slate-400 italic">No attachments yet.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {attachments.map((a) => {
+                    const url     = `/api/tickets/${id}/attachments/${a.id}`
+                    const isImage = a.contentType.startsWith('image/')
+                    return (
+                      <li
+                        key={a.id}
+                        className="flex items-start gap-3 p-3 rounded-md border border-slate-200 bg-slate-50"
+                      >
+                        {isImage ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 block w-20 h-20 rounded border border-slate-200 overflow-hidden bg-white hover:border-blue-400 transition"
+                            title="Open full size"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={a.filename}
+                              className="w-full h-full object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <div className="flex-shrink-0 w-20 h-20 rounded border border-slate-200 bg-white flex items-center justify-center">
+                            <FileText className="w-8 h-8 text-slate-400" />
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-slate-900 hover:text-blue-600 hover:underline block truncate"
+                          >
+                            {a.filename}
+                          </a>
+                          <div className="text-xs text-slate-500 mt-0.5 space-y-0.5">
+                            <div>{fmtBytes(a.sizeBytes)} · {a.contentType}</div>
+                            <div>Uploaded {format(new Date(a.uploadedAt), 'dd MMM yyyy, HH:mm')}</div>
+                          </div>
+
+                          <div className="flex items-center gap-3 mt-2">
+                            <a
+                              href={url}
+                              download={a.filename}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </a>
+                            {canEditAttachments && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAttachment(a.id, a.filename)}
+                                className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+
+              {canEditAttachments && attachments.length < MAX_FILES && (
+                <p className="text-[11px] text-slate-400">
+                  Up to {MAX_FILES} files, max {fmtBytes(MAX_FILE_BYTES)} each. PNG, JPEG, GIF, WebP, or PDF only.
+                </p>
               )}
             </div>
           )}
