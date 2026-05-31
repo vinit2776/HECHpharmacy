@@ -68,6 +68,12 @@ export async function POST(req: Request) {
   } catch (e: any) {
     if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (e.code === 'P2002' && e.meta?.target?.includes?.('hospital_patient_id')) {
+      return NextResponse.json(
+        { error: 'Hospital ID already in use by another patient. Each Hospital ID must be unique.' },
+        { status: 409 },
+      )
+    }
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

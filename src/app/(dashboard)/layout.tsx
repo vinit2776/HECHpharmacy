@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
+import { BugReportButton } from '@/components/support/BugReportButton'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -19,6 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="p-6">{children}</div>
         </main>
       </div>
+      <BugReportButton />
     </div>
   )
 }

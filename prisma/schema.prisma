@@ -139,6 +139,7 @@ model User {
   purchReturnAppr  PurchaseReturn[] @relation("PReturnApprBy")
   reports          Report[]
   auditLogs        AuditLog[]
+  ticketsReported  SupportTicket[] @relation("TicketsReported")
 
   @@map("users")
 }
@@ -229,7 +230,7 @@ model Doctor {
 
 model Patient {
   id                String          @id @default(uuid())
-  hospitalPatientId String?         @map("hospital_patient_id")
+  hospitalPatientId String?         @unique @map("hospital_patient_id")
   name              String
   age               Int?
   gender            Gender?
@@ -560,4 +561,72 @@ model AuditLog {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("audit_logs")
+}
+
+// ─── Support Tickets ─────────────────────────────────────────────────────────
+
+enum TicketCategory {
+  bug
+  feature_request
+  question
+  ui_issue
+  data_issue
+  performance
+  other
+}
+
+enum TicketSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  awaiting_user
+  resolved
+  closed
+}
+
+model SupportTicket {
+  id               String   @id @default(uuid())
+  ticketNo         String   @unique @map("ticket_no")
+  title            String
+  description      String   @db.Text
+  stepsToReproduce String?  @map("steps_to_reproduce") @db.Text
+  expectedBehavior String?  @map("expected_behavior") @db.Text
+  actualBehavior   String?  @map("actual_behavior") @db.Text
+  category         TicketCategory @default(bug)
+  severity         TicketSeverity @default(medium)
+  status           TicketStatus   @default(open)
+
+  // Auto-captured context (for the developer to reproduce)
+  pageUrl     String?  @map("page_url")
+  userAgent   String?  @map("user_agent") @db.Text
+  screenSize  String?  @map("screen_size")
+  buildCommit String?  @map("build_commit")
+  buildTime   String?  @map("build_time")
+
+  // Reporter (denormalized so we keep audit trail even if user is deleted)
+  reporterId    String  @map("reporter_id")
+  reporterName  String  @map("reporter_name")
+  reporterEmail String  @map("reporter_email")
+  reporterRole  String  @map("reporter_role")
+  reporter      User    @relation("TicketsReported", fields: [reporterId], references: [id])
+
+  // Admin handling
+  adminNotes  String?   @map("admin_notes") @db.Text
+  resolution  String?   @db.Text
+  resolvedAt  DateTime? @map("resolved_at")
+  resolvedBy  String?   @map("resolved_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([reporterId])
+  @@index([createdAt])
+  @@map("support_tickets")
 }
