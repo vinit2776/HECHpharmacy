@@ -69,6 +69,7 @@ export default function PatientsPage() {
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const fetchPatients = useCallback(async () => {
     setLoading(true)
@@ -96,14 +97,23 @@ export default function PatientsPage() {
   }, [fetchPatients])
 
   const handleRegister = async () => {
-    if (!form.name.trim()) {
-      setFormError('Patient name is required')
-      return
+    const errors: Record<string, string> = {}
+    if (!form.name.trim()) errors.name = 'Patient name is required'
+    if (form.age !== '') {
+      const ageNum = Number(form.age)
+      if (!Number.isInteger(ageNum) || ageNum < 0 || ageNum > 150) {
+        errors.age = 'Age must be a whole number between 0 and 150'
+      }
     }
     if (form.patientCategory === 'bpl' && !form.bplCardNo.trim()) {
-      setFormError('BPL card number is required for BPL patients')
+      errors.bplCardNo = 'BPL card number is required for BPL patients'
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setFormError(null)
       return
     }
+    setFieldErrors({})
     setSaving(true)
     setFormError(null)
     try {
@@ -124,6 +134,18 @@ export default function PatientsPage() {
       })
       if (!res.ok) {
         const body = await res.json()
+        // Map any server-side field issues back to fieldErrors
+        if (body.issues?.length) {
+          const serverErrors: Record<string, string> = {}
+          for (const issue of body.issues) {
+            const field = issue.path?.[0]
+            if (field) serverErrors[field] = issue.message
+          }
+          if (Object.keys(serverErrors).length > 0) {
+            setFieldErrors(serverErrors)
+            return
+          }
+        }
         throw new Error(body.error ?? 'Failed to register patient')
       }
       const created = await res.json()
@@ -142,7 +164,7 @@ export default function PatientsPage() {
       <PageHeader
         title="Patients"
         action={
-          <Button onClick={() => { setForm(defaultForm); setFormError(null); setDialogOpen(true) }}>
+          <Button onClick={() => { setForm(defaultForm); setFormError(null); setFieldErrors({}); setDialogOpen(true) }}>
             + Register Patient
           </Button>
         }
@@ -206,7 +228,7 @@ export default function PatientsPage() {
                     title="No patients found"
                     description="Register your first patient to get started"
                     actionLabel="Register Patient"
-                    onAction={() => { setForm(defaultForm); setFormError(null); setDialogOpen(true) }}
+                    onAction={() => { setForm(defaultForm); setFormError(null); setFieldErrors({}); setDialogOpen(true) }}
                   />
                 </TableCell>
               </TableRow>
@@ -256,9 +278,11 @@ export default function PatientsPage() {
                 <Input
                   id="p-name"
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setFieldErrors((fe) => ({ ...fe, name: '' })) }}
                   placeholder="Full name"
+                  className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="p-hid">Hospital Patient ID</Label>
@@ -292,9 +316,11 @@ export default function PatientsPage() {
                   min={0}
                   max={150}
                   value={form.age}
-                  onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))}
+                  onChange={(e) => { setForm((f) => ({ ...f, age: e.target.value })); setFieldErrors((fe) => ({ ...fe, age: '' })) }}
                   placeholder="Years"
+                  className={fieldErrors.age ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {fieldErrors.age && <p className="text-xs text-red-600">{fieldErrors.age}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Gender</Label>
@@ -330,9 +356,11 @@ export default function PatientsPage() {
                   <Input
                     id="p-bpl"
                     value={form.bplCardNo}
-                    onChange={(e) => setForm((f) => ({ ...f, bplCardNo: e.target.value }))}
+                    onChange={(e) => { setForm((f) => ({ ...f, bplCardNo: e.target.value })); setFieldErrors((fe) => ({ ...fe, bplCardNo: '' })) }}
                     placeholder="BPL card number"
+                    className={fieldErrors.bplCardNo ? 'border-red-500 focus-visible:ring-red-500' : ''}
                   />
+                  {fieldErrors.bplCardNo && <p className="text-xs text-red-600">{fieldErrors.bplCardNo}</p>}
                 </div>
               )}
               <div className="col-span-2 space-y-2">
