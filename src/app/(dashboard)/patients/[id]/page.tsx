@@ -69,8 +69,22 @@ function PatientInfoSection({ patient }: { patient: Patient }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleSave = async () => {
+    const errors: Record<string, string> = {}
+    if (!form.name.trim()) errors.name = 'Patient name is required'
+    if (form.age !== '') {
+      const ageNum = Number(form.age)
+      if (!Number.isInteger(ageNum) || ageNum < 0 || ageNum > 150) {
+        errors.age = 'Age must be a whole number between 0 and 150'
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
     setSaving(true)
     setSaveError(null)
     try {
@@ -88,6 +102,17 @@ function PatientInfoSection({ patient }: { patient: Patient }) {
       })
       if (!res.ok) {
         const body = await res.json()
+        if (body.issues?.length) {
+          const serverErrors: Record<string, string> = {}
+          for (const issue of body.issues) {
+            const field = issue.path?.[0]
+            if (field) serverErrors[field] = issue.message
+          }
+          if (Object.keys(serverErrors).length > 0) {
+            setFieldErrors(serverErrors)
+            return
+          }
+        }
         throw new Error(body.error ?? 'Failed to save')
       }
       setEditing(false)
@@ -148,8 +173,10 @@ function PatientInfoSection({ patient }: { patient: Patient }) {
             <Input
               id="pi-name"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setFieldErrors((fe) => ({ ...fe, name: '' })) }}
+              className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
             />
+            {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="pi-hid">Hospital Patient ID</Label>
@@ -175,8 +202,10 @@ function PatientInfoSection({ patient }: { patient: Patient }) {
               min={0}
               max={150}
               value={form.age}
-              onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))}
+              onChange={(e) => { setForm((f) => ({ ...f, age: e.target.value })); setFieldErrors((fe) => ({ ...fe, age: '' })) }}
+              className={fieldErrors.age ? 'border-red-500 focus-visible:ring-red-500' : ''}
             />
+            {fieldErrors.age && <p className="text-xs text-red-600">{fieldErrors.age}</p>}
           </div>
           <div className="space-y-2">
             <Label>Gender</Label>
