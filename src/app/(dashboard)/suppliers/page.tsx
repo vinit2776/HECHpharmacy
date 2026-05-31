@@ -262,9 +262,15 @@ export default function SuppliersPage() {
                 <Label htmlFor="s-phone">Phone</Label>
                 <Input
                   id="s-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  placeholder="+91 9XXXXXXXXX"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                    setForm((f) => ({ ...f, phone: digits }))
+                  }}
+                  placeholder="10-digit mobile number"
                 />
               </div>
               <div className="space-y-2">
