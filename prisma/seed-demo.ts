@@ -873,6 +873,209 @@ async function main() {
   })
   console.log('   ✓ 4 reports (2 ready, 1 failed, 1 compliance)\n')
 
+  // ── 9. Pharmacy settings ───────────────────────────────────────────────────
+  console.log('🏥  Upserting pharmacy settings…')
+  await prisma.pharmacySettings.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      pharmacyName: 'HECH Eye Hospital Pharmacy',
+      address: '14, Anna Salai, Near Gemini Flyover',
+      city: 'Chennai',
+      state: 'Tamil Nadu',
+      pincode: '600002',
+      phone: '044-28550001',
+      email: 'pharmacy@hecheyehospital.in',
+      gstin: '33AAHCH1234P1Z5',
+      drugLicenseNo: 'TN/DL/2019/000412',
+      cinNo: 'U85110TN2010PTC078432',
+      panNo: 'AAHCH1234P',
+    },
+  })
+  console.log('   ✓ Pharmacy settings configured\n')
+
+  // ── 10. Audit logs ─────────────────────────────────────────────────────────
+  console.log('📝  Creating audit log entries…')
+  const auditEntries = [
+    { userId: managerUser.id, action: 'CREATE', tableName: 'purchase_grns', recordId: grn1.id, afterData: { grnNumber: 'GRN-202504-0001', status: 'draft' }, createdAt: d(35) },
+    { userId: purchaseUser.id, action: 'UPDATE', tableName: 'purchase_grns', recordId: grn1.id, beforeData: { status: 'draft' }, afterData: { status: 'confirmed' }, createdAt: d(30) },
+    { userId: purchaseUser.id, action: 'CREATE', tableName: 'purchase_grns', recordId: grn2.id, afterData: { grnNumber: 'GRN-202504-0002', status: 'draft' }, createdAt: d(18) },
+    { userId: managerUser.id, action: 'UPDATE', tableName: 'purchase_grns', recordId: grn2.id, beforeData: { status: 'draft' }, afterData: { status: 'confirmed' }, createdAt: d(15) },
+    { userId: counterUser.id, action: 'CREATE', tableName: 'sales_bills', recordId: 'demo-bill-1', afterData: { billNumber: 'BILL-202504-0001', netAmount: 144.48 }, createdAt: d(28) },
+    { userId: counterUser.id, action: 'CREATE', tableName: 'sales_bills', recordId: 'demo-bill-2', afterData: { billNumber: 'BILL-202504-0002', netAmount: 0 }, createdAt: d(25) },
+    { userId: managerUser.id, action: 'UPDATE', tableName: 'sales_bills', recordId: 'demo-bill-7', beforeData: { status: 'active' }, afterData: { status: 'cancelled', cancellationReason: 'Patient requested cancellation — wrong prescription' }, createdAt: d(5) },
+    { userId: managerUser.id, action: 'UPDATE', tableName: 'sales_returns', recordId: 'SR-202504-0001', beforeData: { status: 'pending_approval' }, afterData: { status: 'approved' }, createdAt: d(20) },
+    { userId: managerUser.id, action: 'UPDATE', tableName: 'sales_returns', recordId: 'SR-202504-0003', beforeData: { status: 'pending_approval' }, afterData: { status: 'rejected', rejectionReason: 'Bill verified — correct medicine dispensed' }, createdAt: d(13) },
+    { userId: adminUser.id, action: 'UPDATE', tableName: 'inventory_batches', recordId: 'batch-LAT-2301', beforeData: { isQuarantined: false }, afterData: { isQuarantined: true, quarantineReason: 'Cold chain breach' }, createdAt: d(14) },
+  ]
+  for (let i = 0; i < auditEntries.length; i++) {
+    const e = auditEntries[i]
+    await prisma.auditLog.create({
+      data: {
+        id: `demo-audit-${i + 1}`,
+        userId: e.userId,
+        action: e.action,
+        tableName: e.tableName,
+        recordId: e.recordId,
+        beforeData: e.beforeData ?? null,
+        afterData: e.afterData ?? null,
+        ipAddress: '127.0.0.1',
+        createdAt: e.createdAt,
+      },
+    }).catch(() => { /* skip if already exists */ })
+  }
+  console.log(`   ✓ ${auditEntries.length} audit log entries\n`)
+
+  // ── 11. Support tickets ────────────────────────────────────────────────────
+  console.log('🎫  Creating support tickets…')
+
+  const ticketSpecs = [
+    {
+      id: 'demo-ticket-1',
+      ticketNo: 'TKT-2025-0001',
+      title: 'Bill PDF not generating for BPL patients',
+      description: 'When trying to print a bill for a BPL patient (100% discount), the PDF generation fails silently. No error is shown but the PDF download never starts.',
+      stepsToReproduce: '1. Log in as Counter Pharmacist\n2. Create a bill for a BPL patient\n3. Click "Print Bill"\n4. Observe — spinner appears briefly then nothing happens',
+      expectedBehavior: 'A PDF should download with the bill details and 100% BPL discount reflected.',
+      actualBehavior: 'PDF download never initiates. Network tab shows a 500 error on /api/billing/bills/[id]/pdf',
+      category: 'bug' as const,
+      severity: 'high' as const,
+      status: 'in_progress' as const,
+      pageUrl: '/billing',
+      screenSize: '1920x1080',
+      reporterId: counterUser.id,
+      reporterName: 'Counter Staff',
+      reporterEmail: 'counter@eyehospital.com',
+      reporterRole: 'counter_pharmacist',
+      adminNotes: 'Reproduced locally. Issue is in the PDF renderer — when netAmount is 0, the tax table throws a divide-by-zero. Working on fix.',
+      createdAt: d(10),
+    },
+    {
+      id: 'demo-ticket-2',
+      ticketNo: 'TKT-2025-0002',
+      title: 'Add patient search by hospital ID on billing screen',
+      description: 'Currently the billing page only lets you search patients by name. Many patients come with their hospital ID card and it would be faster to search by HOS- number directly.',
+      category: 'feature_request' as const,
+      severity: 'medium' as const,
+      status: 'open' as const,
+      pageUrl: '/billing/new',
+      screenSize: '1366x768',
+      reporterId: counterUser.id,
+      reporterName: 'Counter Staff',
+      reporterEmail: 'counter@eyehospital.com',
+      reporterRole: 'counter_pharmacist',
+      createdAt: d(7),
+    },
+    {
+      id: 'demo-ticket-3',
+      ticketNo: 'TKT-2025-0003',
+      title: 'Form 17 export missing batch expiry date column',
+      description: 'The Excel export for Form 17 (Purchase Register) is missing the "Expiry Date" column. This is a mandatory field for pharmacy regulatory compliance.',
+      stepsToReproduce: '1. Go to Registers → Form 17\n2. Click Export → Excel\n3. Open the downloaded file\n4. Notice "Expiry Date" column is absent',
+      expectedBehavior: 'Excel export should include all Form 17 mandatory fields including Expiry Date per Tamil Nadu pharmacy rules.',
+      actualBehavior: 'Expiry Date column is completely absent in the downloaded Excel file.',
+      category: 'data_issue' as const,
+      severity: 'critical' as const,
+      status: 'resolved' as const,
+      pageUrl: '/registers/form17',
+      screenSize: '1920x1080',
+      reporterId: managerUser.id,
+      reporterName: 'Pharmacy Manager',
+      reporterEmail: 'manager@eyehospital.com',
+      reporterRole: 'manager',
+      adminNotes: 'Fixed in the Excel renderer — the expiryDate column was being mapped to manufacturedDate by mistake.',
+      resolution: 'Deployed fix — Form 17 Excel export now correctly includes Expiry Date as the 8th column, matching the official register format.',
+      resolvedAt: d(3),
+      resolvedBy: adminUser.id,
+      createdAt: d(12),
+    },
+    {
+      id: 'demo-ticket-4',
+      ticketNo: 'TKT-2025-0004',
+      title: 'Inventory page very slow when filtering by "near expiry"',
+      description: 'Clicking the "Near Expiry" filter on the inventory page takes 8-12 seconds to load results. All other filters respond in under 1 second.',
+      stepsToReproduce: '1. Go to Inventory\n2. Click the "Near Expiry (90 days)" filter chip\n3. Wait — page takes 8-12 seconds to respond',
+      expectedBehavior: 'Filter results should appear within 1-2 seconds.',
+      actualBehavior: 'Near expiry filter takes 8-12 seconds. Checked network tab — the API call itself is slow, not a frontend issue.',
+      category: 'performance' as const,
+      severity: 'medium' as const,
+      status: 'awaiting_user' as const,
+      pageUrl: '/inventory',
+      screenSize: '1280x800',
+      reporterId: purchaseUser.id,
+      reporterName: 'Purchase Staff',
+      reporterEmail: 'purchase@eyehospital.com',
+      reporterRole: 'purchase_pharmacist',
+      adminNotes: 'Added a DB index on expiry_date. Can you test again and confirm if performance improved?',
+      createdAt: d(5),
+    },
+    {
+      id: 'demo-ticket-5',
+      ticketNo: 'TKT-2025-0005',
+      title: 'How to record a partial GRN when supplier delivers short quantity?',
+      description: 'We ordered 50 units of Moxifloxacin but supplier only delivered 30 units today and will deliver the remaining 20 next week. How do we record this partial delivery?',
+      category: 'question' as const,
+      severity: 'low' as const,
+      status: 'resolved' as const,
+      reporterId: purchaseUser.id,
+      reporterName: 'Purchase Staff',
+      reporterEmail: 'purchase@eyehospital.com',
+      reporterRole: 'purchase_pharmacist',
+      resolution: 'You can create a GRN with the actual received quantity (30) and keep status as "Draft" until the second delivery. When the rest arrives, create a second GRN for the remaining 20 units referencing the same supplier invoice with a suffix (e.g., APEX-INV-3509-B). This keeps your inventory accurate.',
+      resolvedAt: d(1),
+      resolvedBy: adminUser.id,
+      createdAt: d(4),
+    },
+    {
+      id: 'demo-ticket-6',
+      ticketNo: 'TKT-2025-0006',
+      title: 'Dark mode text unreadable on GRN confirmation dialog',
+      description: 'When the browser/OS is in dark mode, the GRN confirmation dialog has dark text on a dark background, making it unreadable.',
+      category: 'ui_issue' as const,
+      severity: 'low' as const,
+      status: 'open' as const,
+      pageUrl: '/purchasing/grn',
+      screenSize: '1440x900',
+      reporterId: managerUser.id,
+      reporterName: 'Pharmacy Manager',
+      reporterEmail: 'manager@eyehospital.com',
+      reporterRole: 'manager',
+      createdAt: d(2),
+    },
+  ]
+
+  for (const t of ticketSpecs) {
+    await prisma.supportTicket.upsert({
+      where: { id: t.id },
+      update: {},
+      create: {
+        id: t.id,
+        ticketNo: t.ticketNo,
+        title: t.title,
+        description: t.description,
+        stepsToReproduce: t.stepsToReproduce,
+        expectedBehavior: t.expectedBehavior,
+        actualBehavior: t.actualBehavior,
+        category: t.category,
+        severity: t.severity,
+        status: t.status,
+        pageUrl: t.pageUrl,
+        screenSize: t.screenSize,
+        reporterId: t.reporterId,
+        reporterName: t.reporterName,
+        reporterEmail: t.reporterEmail,
+        reporterRole: t.reporterRole,
+        adminNotes: t.adminNotes,
+        resolution: t.resolution,
+        resolvedAt: t.resolvedAt,
+        resolvedBy: t.resolvedBy,
+        createdAt: t.createdAt,
+      },
+    })
+  }
+  console.log(`   ✓ ${ticketSpecs.length} support tickets (open/in-progress/awaiting/resolved)\n`)
+
   // ── Summary ────────────────────────────────────────────────────────────────
   console.log('━'.repeat(60))
   console.log('✅  Demo seed complete!\n')
@@ -885,6 +1088,9 @@ async function main() {
   console.log('  Form 17      → 7 H/H1 entries from confirmed GRNs')
   console.log('  Form 18      → entries auto-created for all H/H1 dispensing')
   console.log('  Reports      → 3 ready + 1 failed in report centre')
+  console.log('  Support      → 6 tickets across all statuses and categories')
+  console.log('  Audit Log    → 10 entries covering key GRN, billing, and return actions')
+  console.log('  Settings     → Pharmacy profile pre-filled (HECH, Chennai)')
   console.log('')
   console.log('  Counter login → bills for BPL patients show 100% discount')
   console.log('  Manager login → can approve SR-202504-0002 (pending)')
