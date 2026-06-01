@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, COUNTER_ROLES } from '@/lib/auth-utils'
-import { generateBillNumber } from '@/lib/billing-numbers'
+import { requireRole, COUNTER_ROLES, apiError } from '@/lib/auth-utils'
 import { confirmBill } from '@/lib/db/billing'
+import { withNumberRetry } from '@/lib/billing-numbers'
+import { calculateLine } from '@/lib/discount/engine'
+import { addDays } from 'date-fns'
 
 export async function GET(req: Request) {
   try {
@@ -33,9 +35,7 @@ export async function GET(req: Request) {
 
     if (date) {
       const day = new Date(date)
-      const nextDay = new Date(day)
-      nextDay.setDate(nextDay.getDate() + 1)
-      where.billDate = { gte: day, lt: nextDay }
+      where.billDate = { gte: day, lt: addDays(day, 1) }
     }
 
     const bills = await prisma.salesBill.findMany({
@@ -60,9 +60,7 @@ export async function GET(req: Request) {
       }))
     )
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -82,18 +80,11 @@ export async function POST(req: Request) {
       items = [],
     } = body
 
-    // Validate Schedule H/H1 items require internal prescription with doctor
-    if (prescriptionSource === 'internal') {
-      const hasScheduledItems = items.some((item: any) => {
-        const s = (item.schedule ?? '').toLowerCase()
-        return s === 'h' || s === 'h1'
-      })
-      if (hasScheduledItems && !doctorId) {
-        return NextResponse.json(
-          { error: 'Doctor is required for Schedule H/H1 items with internal prescription' },
-          { status: 422 }
-        )
-      }
+    if (!patientId || !prescriptionSource || !paymentMode) {
+      return NextResponse.json({ error: 'patientId, prescriptionSource, and paymentMode are required' }, { status: 422 })
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: 'At least one item is required' }, { status: 422 })
     }
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } })
@@ -109,64 +100,114 @@ export async function POST(req: Request) {
       }
     }
 
-    const billNumber = await generateBillNumber()
+    // Fetch authoritative batch + drug data; compute all financials server-side.
+    // Client-supplied discount/price fields are ignored to prevent manipulation.
+    const resolvedItems = await Promise.all(
+      items.map(async (item: any) => {
+        if (!item.batchId || !item.drugId || !item.quantity || item.quantity < 1) {
+          throw new Error(`Invalid item: batchId, drugId, and quantity (≥1) are required`)
+        }
+        const batch = await prisma.inventoryBatch.findUnique({
+          where: { id: item.batchId },
+          include: { drug: { include: { discountConfig: true } } },
+        })
+        if (!batch) throw new Error(`Batch ${item.batchId} not found`)
+        if (batch.drugId !== item.drugId) throw new Error(`Batch does not belong to the specified drug`)
+        if (batch.isQuarantined) throw new Error(`Batch ${batch.batchNo} is quarantined`)
+        if (batch.expiryDate <= new Date()) throw new Error(`Batch ${batch.batchNo} is expired`)
 
-    const subtotalMrp = items.reduce((sum: number, item: any) => sum + item.mrpPerUnit * item.quantity, 0)
-    const totalDiscountAmount = items.reduce((sum: number, item: any) => sum + (item.discountAmount ?? 0), 0)
-    const taxableAmount = items.reduce((sum: number, item: any) => sum + (item.taxableAmount ?? 0), 0)
-    const totalGstAmount = items.reduce((sum: number, item: any) => sum + (item.gstAmount ?? 0), 0)
-    const netAmount = items.reduce((sum: number, item: any) => sum + (item.lineNetAmount ?? 0), 0)
-
-    const bill = await confirmBill(
-      {
-        header: {
-          billNumber,
-          billDate: new Date(),
-          patientId,
-          patientCategory: patient.patientCategory ?? 'general',
-          doctorId: doctorId ?? undefined,
-          prescriptionNo: prescriptionNo ?? undefined,
-          prescriptionDate: prescriptionDate ? new Date(prescriptionDate) : undefined,
+        const drug = batch.drug
+        const config = drug.discountConfig
+        const calc = calculateLine({
           prescriptionSource,
-          servedBy: session.user.id,
-          subtotalMrp,
-          totalDiscountAmount,
-          taxableAmount,
-          totalGstAmount,
-          netAmount,
-          paymentMode,
-          paymentReference: paymentReference ?? undefined,
-        },
-        items: items.map((item: any) => ({
-          drugId: item.drugId,
-          batchId: item.batchId,
-          drugName: item.drugName,
-          batchNo: item.batchNo,
-          expiryDate: new Date(item.expiryDate),
-          hsnCode: item.hsnCode,
-          schedule: item.schedule,
+          patientCategory: patient.patientCategory as 'bpl' | 'general',
+          discountApplicable: config?.discountApplicable ?? false,
+          bplDiscountPct: config ? Number(config.bplDiscountPct) : 0,
+          generalDiscountPct: config ? Number(config.generalDiscountPct) : 0,
+          mrpPerUnit: Number(batch.mrpPerUnit),
           quantity: item.quantity,
-          mrpPerUnit: item.mrpPerUnit,
-          discountPctApplied: item.discountPctApplied,
-          discountAmount: item.discountAmount,
-          taxableAmount: item.taxableAmount,
-          gstRate: item.gstRate,
-          gstAmount: item.gstAmount,
-          lineNetAmount: item.lineNetAmount,
-        })),
-        patientName: patient.name,
-        patientAge: patient.age ?? undefined,
-        patientGender: patient.gender ?? undefined,
-        doctorName: doctor?.name ?? undefined,
-        doctorRegNo: doctor?.registrationNo ?? undefined,
-      },
-      session.user.id
+          gstRate: Number(drug.gstRate),
+        })
+
+        return {
+          drugId: drug.id,
+          batchId: batch.id,
+          drugName: drug.name,
+          batchNo: batch.batchNo,
+          expiryDate: batch.expiryDate,
+          hsnCode: drug.hsnCode,
+          schedule: drug.schedule,
+          quantity: item.quantity,
+          mrpPerUnit: Number(batch.mrpPerUnit),
+          discountPctApplied: calc.discountPctApplied,
+          discountAmount: calc.discountAmount,
+          taxableAmount: calc.taxableAmount,
+          gstRate: Number(drug.gstRate),
+          gstAmount: calc.gstAmount,
+          lineNetAmount: calc.lineNetAmount,
+        }
+      })
+    )
+
+    // Schedule H/H1 check uses the authoritative schedule from the DB, not the client
+    const hasScheduledItems = resolvedItems.some((i) => {
+      const s = String(i.schedule).toLowerCase()
+      return s === 'h' || s === 'h1'
+    })
+    if (hasScheduledItems && !doctorId) {
+      return NextResponse.json(
+        { error: 'Doctor is required for Schedule H/H1 items' },
+        { status: 422 }
+      )
+    }
+
+    const round2 = (n: number) => Math.round(n * 100) / 100
+    const subtotalMrp = round2(resolvedItems.reduce((s, i) => s + i.mrpPerUnit * i.quantity, 0))
+    const totalDiscountAmount = round2(resolvedItems.reduce((s, i) => s + i.discountAmount, 0))
+    const taxableAmount = round2(resolvedItems.reduce((s, i) => s + i.taxableAmount, 0))
+    const totalGstAmount = round2(resolvedItems.reduce((s, i) => s + i.gstAmount, 0))
+    const netAmount = round2(resolvedItems.reduce((s, i) => s + i.lineNetAmount, 0))
+
+    const bill = await withNumberRetry(() =>
+      confirmBill(
+        {
+          header: {
+            billDate: new Date(),
+            patientId,
+            patientCategory: patient.patientCategory ?? 'general',
+            doctorId: doctorId ?? undefined,
+            prescriptionNo: prescriptionNo ?? undefined,
+            prescriptionDate: prescriptionDate ? new Date(prescriptionDate) : undefined,
+            prescriptionSource,
+            servedBy: session.user.id,
+            subtotalMrp,
+            totalDiscountAmount,
+            taxableAmount,
+            totalGstAmount,
+            netAmount,
+            paymentMode,
+            paymentReference: paymentReference ?? undefined,
+          },
+          items: resolvedItems,
+          patientName: patient.name,
+          patientAge: patient.age ?? undefined,
+          patientGender: patient.gender ?? undefined,
+          doctorName: doctor?.name ?? undefined,
+          doctorRegNo: doctor?.registrationNo ?? undefined,
+        },
+        session.user.id
+      )
     )
 
     return NextResponse.json(bill, { status: 201 })
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    if (e.message?.startsWith('Insufficient stock') ||
+        e.message?.startsWith('Batch') ||
+        e.message?.startsWith('Invalid item') ||
+        e.message?.startsWith('Doctor') ||
+        e.message?.startsWith('Patient')) {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
+    return apiError(e)
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, MANAGER_ROLES } from '@/lib/auth-utils'
+import { requireRole, MANAGER_ROLES, apiError } from '@/lib/auth-utils'
 import { createAuditLog } from '@/lib/db/audit'
 
 export async function POST(
@@ -12,9 +12,13 @@ export async function POST(
     const body = await req.json()
     const { decision, rejectionReason } = body
 
+    if (decision !== 'approve' && decision !== 'reject') {
+      return NextResponse.json({ error: 'decision must be "approve" or "reject"' }, { status: 422 })
+    }
+
     const purchaseReturn = await prisma.purchaseReturn.findUnique({
       where: { id: params.id },
-      include: { items: true },
+      include: { items: { include: { batch: true, drug: true } } },
     })
 
     if (!purchaseReturn) {
@@ -30,21 +34,31 @@ export async function POST(
 
     const updated = await prisma.$transaction(async (tx) => {
       if (decision === 'approve') {
-        for (const item of purchaseReturn.items) {
-          await tx.inventoryBatch.update({
-            where: { id: item.batchId },
-            data: { quantityAvailable: { decrement: item.quantityReturned } },
-          })
-        }
-
-        await tx.purchaseReturn.update({
-          where: { id: params.id },
+        // Atomic status guard: only one concurrent approve wins
+        const guard = await tx.purchaseReturn.updateMany({
+          where: { id: params.id, status: 'pending_approval' },
           data: {
             status: 'approved',
             approvedBy: session.user.id,
             approvedAt: new Date(),
           },
         })
+        if (guard.count === 0) {
+          throw new Error('Return is no longer pending approval')
+        }
+
+        for (const item of purchaseReturn.items) {
+          // Guard: only decrement if sufficient stock exists
+          const deducted = await tx.inventoryBatch.updateMany({
+            where: { id: item.batchId, quantityAvailable: { gte: item.quantityReturned } },
+            data: { quantityAvailable: { decrement: item.quantityReturned } },
+          })
+          if (deducted.count === 0) {
+            const drugName = item.drug?.name ?? item.batchId
+            const batchNo = item.batch?.batchNo ?? item.batchId
+            throw new Error(`Insufficient stock for ${drugName} (batch ${batchNo}) to approve return`)
+          }
+        }
 
         await createAuditLog({
           userId: session.user.id,
@@ -54,9 +68,10 @@ export async function POST(
           afterData: { status: 'approved', returnNumber: purchaseReturn.returnNumber },
           tx,
         })
-      } else if (decision === 'reject') {
-        await tx.purchaseReturn.update({
-          where: { id: params.id },
+      } else {
+        // reject
+        const guard = await tx.purchaseReturn.updateMany({
+          where: { id: params.id, status: 'pending_approval' },
           data: {
             status: 'rejected',
             rejectionReason: rejectionReason ?? null,
@@ -64,6 +79,9 @@ export async function POST(
             approvedAt: new Date(),
           },
         })
+        if (guard.count === 0) {
+          throw new Error('Return is no longer pending approval')
+        }
 
         await createAuditLog({
           userId: session.user.id,
@@ -73,8 +91,6 @@ export async function POST(
           afterData: { status: 'rejected', returnNumber: purchaseReturn.returnNumber, rejectionReason },
           tx,
         })
-      } else {
-        throw new Error('Invalid decision. Must be "approve" or "reject"')
       }
 
       return tx.purchaseReturn.findUnique({
@@ -91,8 +107,10 @@ export async function POST(
 
     return NextResponse.json(updated)
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    if (e.message === 'Return is no longer pending approval' ||
+        e.message?.startsWith('Insufficient stock')) {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
+    return apiError(e)
   }
 }

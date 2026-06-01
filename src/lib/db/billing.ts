@@ -1,6 +1,7 @@
 import { prisma } from '../prisma'
 import { buildForm18 } from './registers'
 import { createAuditLog } from './audit'
+import { generateBillNumberInTx } from '../billing-numbers'
 
 interface BillItemInput {
   drugId: string
@@ -22,7 +23,6 @@ interface BillItemInput {
 
 interface BillCreateInput {
   header: {
-    billNumber: string
     billDate: Date
     patientId: string
     patientCategory: string
@@ -49,7 +49,12 @@ interface BillCreateInput {
 
 export async function confirmBill(data: BillCreateInput, userId: string) {
   return prisma.$transaction(async (tx) => {
-    const bill = await tx.salesBill.create({ data: data.header })
+    // Generate number inside the transaction so the count read and the insert
+    // are in the same unit of work. Caller wraps this in withNumberRetry to
+    // handle the rare case where two concurrent transactions pick the same count.
+    const billNumber = await generateBillNumberInTx(tx)
+
+    const bill = await tx.salesBill.create({ data: { ...data.header, billNumber } })
 
     for (const item of data.items) {
       await tx.salesBillItem.create({
@@ -73,10 +78,16 @@ export async function confirmBill(data: BillCreateInput, userId: string) {
         },
       })
 
-      await tx.inventoryBatch.update({
-        where: { id: item.batchId },
+      // Guard: only decrement if sufficient stock exists.
+      // updateMany returns count=0 if the WHERE is not satisfied; we treat that as
+      // an oversell attempt and abort the transaction.
+      const deducted = await tx.inventoryBatch.updateMany({
+        where: { id: item.batchId, quantityAvailable: { gte: item.quantity } },
         data: { quantityAvailable: { decrement: item.quantity } },
       })
+      if (deducted.count === 0) {
+        throw new Error(`Insufficient stock for ${item.drugName} (batch ${item.batchNo})`)
+      }
 
       const schedule = item.schedule.toLowerCase()
       if (schedule === 'h' || schedule === 'h1') {

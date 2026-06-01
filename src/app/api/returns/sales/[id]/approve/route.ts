@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, MANAGER_ROLES } from '@/lib/auth-utils'
+import { requireRole, MANAGER_ROLES, apiError } from '@/lib/auth-utils'
 import { createAuditLog } from '@/lib/db/audit'
 
 export async function POST(
@@ -11,6 +11,10 @@ export async function POST(
     const session = await requireRole(MANAGER_ROLES)
     const body = await req.json()
     const { decision, rejectionReason, items } = body
+
+    if (decision !== 'approve' && decision !== 'reject') {
+      return NextResponse.json({ error: 'decision must be "approve" or "reject"' }, { status: 422 })
+    }
 
     const salesReturn = await prisma.salesReturn.findUnique({
       where: { id: params.id },
@@ -30,6 +34,19 @@ export async function POST(
 
     const updated = await prisma.$transaction(async (tx) => {
       if (decision === 'approve') {
+        // Atomic status guard: only one concurrent approve wins
+        const guard = await tx.salesReturn.updateMany({
+          where: { id: params.id, status: 'pending_approval' },
+          data: {
+            status: 'approved',
+            approvedBy: session.user.id,
+            approvedAt: new Date(),
+          },
+        })
+        if (guard.count === 0) {
+          throw new Error('Return is no longer pending approval')
+        }
+
         // Merge returnToStock overrides from request body
         const itemOverrides: Record<string, boolean> = {}
         if (items && Array.isArray(items)) {
@@ -44,7 +61,6 @@ export async function POST(
               ? itemOverrides[item.id]
               : item.returnToStock
 
-          // Update item's returnToStock if overridden
           if (itemOverrides[item.id] !== undefined) {
             await tx.salesReturnItem.update({
               where: { id: item.id },
@@ -60,15 +76,6 @@ export async function POST(
           }
         }
 
-        await tx.salesReturn.update({
-          where: { id: params.id },
-          data: {
-            status: 'approved',
-            approvedBy: session.user.id,
-            approvedAt: new Date(),
-          },
-        })
-
         await createAuditLog({
           userId: session.user.id,
           action: 'APPROVE_SALES_RETURN',
@@ -77,9 +84,10 @@ export async function POST(
           afterData: { status: 'approved', returnNumber: salesReturn.returnNumber },
           tx,
         })
-      } else if (decision === 'reject') {
-        await tx.salesReturn.update({
-          where: { id: params.id },
+      } else {
+        // reject
+        const guard = await tx.salesReturn.updateMany({
+          where: { id: params.id, status: 'pending_approval' },
           data: {
             status: 'rejected',
             rejectionReason: rejectionReason ?? null,
@@ -87,6 +95,9 @@ export async function POST(
             approvedAt: new Date(),
           },
         })
+        if (guard.count === 0) {
+          throw new Error('Return is no longer pending approval')
+        }
 
         await createAuditLog({
           userId: session.user.id,
@@ -96,8 +107,6 @@ export async function POST(
           afterData: { status: 'rejected', returnNumber: salesReturn.returnNumber, rejectionReason },
           tx,
         })
-      } else {
-        throw new Error('Invalid decision. Must be "approve" or "reject"')
       }
 
       return tx.salesReturn.findUnique({
@@ -113,8 +122,9 @@ export async function POST(
 
     return NextResponse.json(updated)
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    if (e.message === 'Return is no longer pending approval') {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
+    return apiError(e)
   }
 }

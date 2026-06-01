@@ -31,6 +31,15 @@ export async function withRole(roles: string[], handler: (session: any) => Promi
   }
 }
 
+// Converts any caught error to a safe API response.
+// Prisma errors (code starts with 'P') expose schema details; replace them with a generic message.
+export function apiError(e: any): Response {
+  if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (e.code?.startsWith('P')) return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  return NextResponse.json({ error: e.message ?? 'Internal server error' }, { status: 500 })
+}
+
 export const ALL_ROLES = ['counter_pharmacist', 'purchase_pharmacist', 'manager', 'super_admin']
 export const MANAGER_ROLES = ['manager', 'super_admin']
 export const SUPER_ADMIN_ROLES = ['super_admin']
