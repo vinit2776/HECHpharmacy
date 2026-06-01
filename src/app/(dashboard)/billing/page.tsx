@@ -772,7 +772,7 @@ function StepReview() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.message ?? 'Failed to create bill')
+        throw new Error(err?.error ?? err?.message ?? 'Failed to create bill')
       }
       const bill = await res.json()
       toast.success(`Bill ${bill.billNumber} created successfully`)

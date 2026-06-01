@@ -44,7 +44,7 @@ export function ConfirmGate({
             </div>
             <DialogTitle>{title}</DialogTitle>
           </div>
-          <DialogDescription className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">
+          <DialogDescription className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
             {consequence}
           </DialogDescription>
         </DialogHeader>
