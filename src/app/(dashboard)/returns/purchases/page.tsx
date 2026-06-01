@@ -67,6 +67,18 @@ interface GRN {
   supplierInvoiceNo: string
 }
 
+interface GRNItem {
+  id: string
+  drugId: string
+  batchNo: string
+  drug: { name: string; brandName?: string }
+  quantity: number
+  purchaseRatePerUnit: number
+  // resolved from inventoryBatches
+  batchId?: string
+  availableQty?: number
+}
+
 const RETURN_REASONS: { value: string; label: string }[] = [
   { value: 'expired', label: 'Expired' },
   { value: 'damaged', label: 'Damaged' },
@@ -88,6 +100,8 @@ function InitiatePurchaseReturnDialog({
   const [grn, setGrn] = useState<GRN | null>(null)
   const [grnLoading, setGrnLoading] = useState(false)
   const [grnError, setGrnError] = useState('')
+  const [grnItems, setGrnItems] = useState<GRNItem[]>([])
+  const [returnQtys, setReturnQtys] = useState<Record<string, number>>({})
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -96,6 +110,8 @@ function InitiatePurchaseReturnDialog({
       setGrnSearch('')
       setGrn(null)
       setGrnError('')
+      setGrnItems([])
+      setReturnQtys({})
       setReason('')
     }
   }, [open])
@@ -105,6 +121,8 @@ function InitiatePurchaseReturnDialog({
     setGrnLoading(true)
     setGrnError('')
     setGrn(null)
+    setGrnItems([])
+    setReturnQtys({})
     try {
       const params = new URLSearchParams({ search: query.trim() })
       const res = await fetch(`/api/purchasing/grns?${params}`)
@@ -112,8 +130,29 @@ function InitiatePurchaseReturnDialog({
       const found: GRN | undefined = Array.isArray(data) ? data[0] : data?.grns?.[0]
       if (!found) {
         setGrnError('No GRN found with that number.')
-      } else {
-        setGrn(found)
+        return
+      }
+      setGrn(found)
+
+      // Fetch GRN detail to get items + inventory batches
+      const detailRes = await fetch(`/api/purchasing/grns/${found.id}`)
+      if (detailRes.ok) {
+        const detail = await detailRes.json()
+        // Build a batchNo → batchId + availableQty map from inventoryBatches
+        const batchMap: Record<string, { id: string; qty: number }> = {}
+        for (const b of detail.inventoryBatches ?? []) {
+          batchMap[b.batchNo] = { id: b.id, qty: b.quantityAvailable }
+        }
+        const enriched: GRNItem[] = (detail.items ?? []).map((item: any) => ({
+          ...item,
+          batchId: batchMap[item.batchNo]?.id,
+          availableQty: batchMap[item.batchNo]?.qty ?? 0,
+          purchaseRatePerUnit: Number(item.purchaseRatePerUnit),
+        }))
+        setGrnItems(enriched)
+        const qtys: Record<string, number> = {}
+        enriched.forEach((i) => { qtys[i.id] = 0 })
+        setReturnQtys(qtys)
       }
     } catch {
       setGrnError('Failed to fetch GRN. Please try again.')
@@ -128,6 +167,18 @@ function InitiatePurchaseReturnDialog({
       toast.error('Please provide a reason for the return.')
       return
     }
+    const selectedItems = grnItems
+      .filter((item) => (returnQtys[item.id] ?? 0) > 0 && item.batchId)
+      .map((item) => ({
+        drugId: item.drugId,
+        batchId: item.batchId!,
+        quantityReturned: returnQtys[item.id],
+        returnValue: Math.round(returnQtys[item.id] * item.purchaseRatePerUnit * 100) / 100,
+      }))
+    if (selectedItems.length === 0) {
+      toast.error('Please enter a return quantity for at least one item.')
+      return
+    }
     setSubmitting(true)
     try {
       const res = await fetch('/api/returns/purchases', {
@@ -137,13 +188,13 @@ function InitiatePurchaseReturnDialog({
           originalGrnId: grn.id,
           supplierId: grn.supplierId,
           returnReason: reason,
-          items: [],
+          items: selectedItems,
           notes: '',
         }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.message ?? 'Failed to initiate return.')
+        throw new Error(err?.error ?? 'Failed to initiate return.')
       }
       toast.success('Purchase return initiated successfully.')
       onOpenChange(false)
@@ -157,7 +208,7 @@ function InitiatePurchaseReturnDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Initiate Purchase Return</DialogTitle>
         </DialogHeader>
@@ -205,6 +256,54 @@ function InitiatePurchaseReturnDialog({
             </div>
           )}
 
+          {/* Items */}
+          {grnItems.length > 0 && (
+            <div className="space-y-1">
+              <Label>Return Items</Label>
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Drug</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead className="text-right">GRN Qty</TableHead>
+                      <TableHead className="text-right w-28">Return Qty</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grnItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium text-sm">
+                          {item.drug?.name}
+                          {item.drug?.brandName && (
+                            <span className="text-xs text-slate-400 ml-1">({item.drug.brandName})</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">{item.batchNo}</TableCell>
+                        <TableCell className="text-right text-slate-600 text-sm">{item.quantity}</TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={item.quantity}
+                            value={returnQtys[item.id] ?? 0}
+                            onChange={(e) =>
+                              setReturnQtys((prev) => ({
+                                ...prev,
+                                [item.id]: Math.min(Number(e.target.value), item.quantity),
+                              }))
+                            }
+                            className="w-20 text-right ml-auto"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
           {/* Reason */}
           <div className="space-y-1">
             <Label>
@@ -229,7 +328,10 @@ function InitiatePurchaseReturnDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || !grn || !reason}>
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || !grn || !reason || !Object.values(returnQtys).some((q) => q > 0)}
+          >
             {submitting ? 'Submitting…' : 'Initiate Return'}
           </Button>
         </DialogFooter>
