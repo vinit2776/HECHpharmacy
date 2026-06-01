@@ -10,6 +10,97 @@ HECH is an Eye Hospital Eye Care Pharmacy Management System — a Next.js 14 (Ap
 
 All development and testing must be done locally. Never deploy or push to the live/production environment without explicit user approval.
 
+## Support Ticket Workflow (mandatory — follow every time)
+
+**Whenever support tickets are mentioned or reviewed, follow this exact sequence:**
+
+### Step 1 — Read from LIVE
+Always query the production database for ticket state. Never rely on the local DB as the source of truth for tickets.
+```bash
+# Use PROD_DATABASE_URL from .env.local (the Neon connection string)
+psql "$PROD_DATABASE_URL" -c "
+  SELECT ticket_no, title, severity, status, reporter_name, created_at::date
+  FROM support_tickets
+  WHERE status NOT IN ('resolved', 'closed')
+  ORDER BY created_at;
+"
+```
+
+### Step 2 — Analyse
+- Read the full ticket: description, steps to reproduce, expected vs actual behaviour, page URL, admin notes.
+- Trace the issue through the codebase (API route → DB query → UI component).
+- Identify the root cause before touching any code.
+
+### Step 3 — Fix locally
+- Make all code changes against the local codebase.
+- Run `npm run dev` (or `npm run build` + `npx tsc --noEmit`) to verify no regressions.
+- Test the specific scenario described in the ticket against the local dev server.
+
+### Step 4 — Update ticket on LIVE (status → in_progress + admin notes)
+Write investigation findings to the production DB immediately after root cause is confirmed — before the fix is pushed, so reporters can see progress.
+```bash
+psql "$PROD_DATABASE_URL" -c "
+  UPDATE support_tickets
+  SET status = 'in_progress',
+      admin_notes = '<root cause + fix plan>',
+      updated_at = NOW()
+  WHERE ticket_no = 'TKT-XXXX';
+"
+```
+
+### Step 5 — Get confirmation to push
+Show the user a summary of:
+- What was found (root cause)
+- What was changed (files + lines)
+- What was tested
+Then ask: **"Confirmed — push to live?"**
+
+### Step 6 — Push code to live
+```bash
+git fetch origin
+npm run build && npx tsc --noEmit   # must be clean
+git add <changed files>
+git commit -m "fix: <description> (fixes TKT-XXXX)"
+git push origin main                 # triggers Vercel auto-deploy (~45s)
+```
+
+### Step 7 — Update ticket on LIVE (status → resolved/awaiting_user + resolution)
+After push, write the resolution to the production DB. Use `resolution` (reporter-visible) and `admin_notes` (internal).
+```bash
+psql "$PROD_DATABASE_URL" -c "
+  UPDATE support_tickets
+  SET status      = 'resolved',          -- or 'awaiting_user' if clarification needed
+      resolution  = '<what was fixed, visible to reporter>',
+      admin_notes = '<internal root cause notes>',
+      resolved_at = NOW(),
+      resolved_by = 'Claude (AI assistant)',
+      updated_at  = NOW()
+  WHERE ticket_no = 'TKT-XXXX';
+"
+```
+
+### Key rules
+- **`admin_notes` = internal only** — never shown to the reporter. Use for root cause, file names, line numbers.
+- **`resolution` = reporter-visible** — use for what was fixed and any clarification questions the reporter needs to answer.
+- **Never mark `resolved` without a `resolution` message** the reporter can read.
+- **Clarification questions go in `resolution`**, not `admin_notes`, so the reporter can see them. Set status to `awaiting_user`.
+- **Data changes (ticket status updates) must be applied to `PROD_DATABASE_URL`** — git push only carries code and schema migrations, not row-level data.
+
+## Database — Two Environments
+
+| | Local dev | Production |
+|---|---|---|
+| Host | `localhost:5432` | Neon (`*.neon.tech`) |
+| Variable | `DATABASE_URL` in `.env.local` | `PROD_DATABASE_URL` in `.env.local` |
+| Used for | Development & testing | Live app data, ticket management |
+
+Add both to `.env.local`:
+```bash
+DATABASE_URL="postgresql://pharmacy_user:StrongPassword123@localhost:5432/pharmacy_db"
+PROD_DATABASE_URL="postgres://<user>:<pass>@<host>.neon.tech/neondb?sslmode=require"
+```
+Get `PROD_DATABASE_URL` from Vercel → project → Settings → Environment Variables.
+
 ## Collaboration & Git Hygiene
 
 **This is a shared repository with more than one developer.** As of this milestone, a second co-developer (`charidevops`) contributes alongside the owner (`vinit2776`). Both may push to `main`, so the remote can move between your sessions.

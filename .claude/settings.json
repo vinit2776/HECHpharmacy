@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); prompt=$(echo \"$input\" | jq -r '.prompt // \"\"' 2>/dev/null); if echo \"$prompt\" | grep -qi 'ticket\\|tkt-\\|support ticket'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"SUPPORT TICKET WORKFLOW (mandatory — see CLAUDE.md):\\n1. READ from PROD_DATABASE_URL (Neon) — never the local DB — for live ticket state.\\n2. Analyse the ticket fully before touching code.\\n3. Fix and test locally against the local dev server.\\n4. Show a summary (root cause, files changed, test done) and ask the user to confirm before pushing.\\n5. After git push, run UPDATE statements against PROD_DATABASE_URL: set status, admin_notes (internal-only), and resolution (reporter-visible). Clarification questions → resolution field + status awaiting_user.\\nPROD_DATABASE_URL is the Neon connection string in .env.local.\"}}'; fi",
+            "statusMessage": "Checking ticket workflow context…",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
