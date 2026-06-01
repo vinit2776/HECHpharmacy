@@ -74,7 +74,8 @@ export async function PATCH(
         : 0
     }
 
-    const netPayable = totalAmount + totalGstAmount
+    // lineTotal already includes GST — don't add gstAmount again
+    const netPayable = totalAmount
 
     const grn = await prisma.$transaction(async (tx) => {
       await tx.purchaseGrnItem.deleteMany({ where: { grnId: params.id } })

@@ -74,6 +74,7 @@ interface GRNItem {
   drug: { name: string; brandName?: string }
   quantity: number
   purchaseRatePerUnit: number
+  lineTotal: number   // rate × qty + GST — used to compute per-unit return value
   // resolved from inventoryBatches
   batchId?: string
   availableQty?: number
@@ -148,6 +149,7 @@ function InitiatePurchaseReturnDialog({
           batchId: batchMap[item.batchNo]?.id,
           availableQty: batchMap[item.batchNo]?.qty ?? 0,
           purchaseRatePerUnit: Number(item.purchaseRatePerUnit),
+          lineTotal: Number(item.lineTotal),   // rate × qty + GST (inclusive)
         }))
         setGrnItems(enriched)
         const qtys: Record<string, number> = {}
@@ -173,7 +175,8 @@ function InitiatePurchaseReturnDialog({
         drugId: item.drugId,
         batchId: item.batchId!,
         quantityReturned: returnQtys[item.id],
-        returnValue: Math.round(returnQtys[item.id] * item.purchaseRatePerUnit * 100) / 100,
+        // returnValue = proportional share of lineTotal (rate + GST, inclusive)
+        returnValue: Math.round(returnQtys[item.id] * (item.lineTotal / item.quantity) * 100) / 100,
       }))
     if (selectedItems.length === 0) {
       toast.error('Please enter a return quantity for at least one item.')

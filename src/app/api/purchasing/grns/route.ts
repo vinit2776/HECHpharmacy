@@ -70,7 +70,9 @@ export async function POST(req: Request) {
       totalDiscountAmount += Math.max(0, (item.mrpPerUnit ?? 0) * (item.quantity ?? 0) - (item.lineTotal ?? 0))
     }
 
-    const netPayable = totalAmount + totalGstAmount
+    // lineTotal already includes GST (rate + gst), so netPayable = sum of lineTotals only.
+    // Adding totalGstAmount again would double-count GST.
+    const netPayable = totalAmount
 
     const grn = await withNumberRetry(() => prisma.$transaction(async (tx) => {
       const grnNumber = await generateGrnNumberInTx(tx)
