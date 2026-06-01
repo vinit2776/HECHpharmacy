@@ -5,6 +5,7 @@ import { format, startOfMonth } from 'date-fns'
 import { Printer, FileSpreadsheet, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -115,6 +116,32 @@ export default function Form17Page() {
             </Button>
           </div>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-form17"
+        steps={[
+          {
+            title: 'Auto-populated',
+            description:
+              'Form 17 entries are automatically created from confirmed GRN purchases (Schedule H/H1 drugs)',
+          },
+          {
+            title: 'Filter by Date',
+            description:
+              'Use the date range filter to view entries for a specific period required for inspection',
+          },
+          {
+            title: 'Verify Entries',
+            description:
+              'Cross-check entries against actual GRN records; each row links to the source GRN',
+          },
+          {
+            title: 'Print / Export',
+            description:
+              'Download or print the register for submission to pharmacy inspectors',
+          },
+        ]}
       />
 
       {/* Date range filter */}

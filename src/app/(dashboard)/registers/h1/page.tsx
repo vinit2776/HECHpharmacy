@@ -5,6 +5,7 @@ import { format, startOfMonth } from 'date-fns'
 import { Printer, Download, BookOpen, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -120,6 +121,28 @@ export default function H1RegisterPage() {
             </Button>
           </div>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-h1-register"
+        steps={[
+          {
+            title: 'Auto-populated',
+            description: 'H1 Register entries are auto-created for all sales of Schedule H1 (narcotic/controlled) drugs',
+          },
+          {
+            title: 'Mandatory Details',
+            description: 'Each entry includes patient, doctor, prescription number and quantity dispensed',
+          },
+          {
+            title: 'Periodic Review',
+            description: 'Review monthly; H1 stock must balance between Form 17 (purchases) and this register (sales)',
+          },
+          {
+            title: 'Compliance',
+            description: 'Maintain this register for minimum 3 years; present during Drug Inspector inspections',
+          },
+        ]}
       />
 
       {/* Warning banner */}

@@ -18,6 +18,7 @@ import {
 
 import { useBillingStore, CartItem } from '@/store/billingStore'
 import { StepWizard } from '@/components/shared/StepWizard'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { ConfirmGate } from '@/components/shared/ConfirmGate'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SearchInput } from '@/components/shared/SearchInput'
@@ -954,6 +955,16 @@ export default function BillingPOSPage() {
             Clear & Restart
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-billing-pos"
+        steps={[
+          { title: 'Select Patient', description: 'Search by name or Hospital ID, or proceed as Walk-in' },
+          { title: 'Add Drugs', description: 'Search drugs, pick batch and quantity — pricing auto-calculates' },
+          { title: 'Review & Payment', description: 'Verify items, totals, GST and select payment mode' },
+          { title: 'Confirm Bill', description: 'Submit bill; Form 18 auto-created for Schedule H/H1 drugs' },
+        ]}
       />
 
       <StepWizard steps={STEPS} currentStep={step} />

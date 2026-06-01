@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { Receipt, Eye, Plus, Loader2 } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -111,6 +112,28 @@ export default function BillingHistoryPage() {
             New Bill
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-billing-history"
+        steps={[
+          {
+            title: 'Create Bill',
+            description: 'Go to Billing (New Bill) to generate a bill for a patient or walk-in',
+          },
+          {
+            title: 'Bill Confirmed',
+            description: 'Once submitted, the bill is immutable and assigned a bill number',
+          },
+          {
+            title: 'View & Print',
+            description: 'Open any bill to print the receipt or download as PDF',
+          },
+          {
+            title: 'Sales Returns',
+            description: 'If a patient returns drugs, process via the Sales Returns menu',
+          },
+        ]}
       />
 
       {/* Filters */}

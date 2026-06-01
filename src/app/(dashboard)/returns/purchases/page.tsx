@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
@@ -374,6 +375,28 @@ export default function PurchaseReturnsPage() {
             Initiate Return
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-purchase-returns"
+        steps={[
+          {
+            title: 'Find Original GRN',
+            description: 'Search by GRN number or supplier name to locate the purchase to reverse',
+          },
+          {
+            title: 'Select Return Items',
+            description: 'Choose which drug batches (and quantities) are being returned to supplier',
+          },
+          {
+            title: 'Record Reason',
+            description: 'Document the return reason (damaged, wrong batch, near-expiry, etc.)',
+          },
+          {
+            title: 'Stock Adjusted',
+            description: 'Confirmed purchase returns deduct the returned quantity from inventory',
+          },
+        ]}
       />
 
       {loading ? (

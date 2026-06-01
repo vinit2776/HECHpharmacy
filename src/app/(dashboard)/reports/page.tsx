@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { Lock, Download, RefreshCw, Loader2, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -321,6 +322,28 @@ export default function ReportsPage() {
             Generate Report
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-reports"
+        steps={[
+          {
+            title: 'Select Report Type',
+            description: 'Choose from sales, purchase, inventory, expiry, or GST summary reports',
+          },
+          {
+            title: 'Set Date Range',
+            description: 'Pick the From and To dates for the reporting period',
+          },
+          {
+            title: 'Generate Report',
+            description: 'Click Generate to query live data; large date ranges may take a few seconds',
+          },
+          {
+            title: 'Export',
+            description: 'Download as PDF, Excel (.xlsx), or CSV for further analysis or submission',
+          },
+        ]}
       />
 
       <Tabs value={tab} onValueChange={setTab} className="mb-4">

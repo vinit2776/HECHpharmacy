@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { StepWizard } from '@/components/shared/StepWizard'
 import { ConfirmGate } from '@/components/shared/ConfirmGate'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -501,6 +502,27 @@ export default function NewGrnPage() {
       <PageHeader
         title="New Purchase (GRN)"
         breadcrumb={[{ label: 'Purchases', href: '/purchasing' }, { label: 'New GRN' }]}
+      />
+      <LifecycleGuide
+        storageKey="lifecycle-purchasing-new"
+        steps={[
+          {
+            title: 'Select Supplier',
+            description: 'Choose the supplier from the registered list (add via Suppliers menu if missing)',
+          },
+          {
+            title: 'Add Drug Lines',
+            description: 'For each drug: name, batch no., expiry, quantity, rate, GST — one row per batch',
+          },
+          {
+            title: 'Review Totals',
+            description: 'Verify net payable amount before confirming',
+          },
+          {
+            title: 'Confirm GRN',
+            description: 'Locks the GRN and updates inventory; cannot be edited after confirmation',
+          },
+        ]}
       />
       <StepWizard steps={STEPS} currentStep={step} />
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { Package, Lock } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -115,6 +116,28 @@ export default function InventoryPage() {
   return (
     <div>
       <PageHeader title="Inventory" />
+
+      <LifecycleGuide
+        storageKey="lifecycle-inventory"
+        steps={[
+          {
+            title: 'Stock Arrives',
+            description: 'Confirm a Purchase (GRN) to add new drug batches to inventory automatically',
+          },
+          {
+            title: 'Monitor Stock',
+            description: 'View current stock levels, near-expiry batches, and low-stock alerts here',
+          },
+          {
+            title: 'Quarantine if Needed',
+            description: 'Flag suspect batches as quarantined to prevent them from being sold',
+          },
+          {
+            title: 'Replenish',
+            description: 'When stock is low, raise a new Purchase (GRN) from the Purchasing menu',
+          },
+        ]}
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -141,6 +142,28 @@ export default function SuppliersPage() {
             + Add Supplier
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-suppliers"
+        steps={[
+          {
+            title: 'Register Supplier',
+            description: 'Add supplier with name, contact, GST number, and address details',
+          },
+          {
+            title: 'Raise Purchase',
+            description: 'Go to Purchasing → New Purchase and select this supplier to record a delivery',
+          },
+          {
+            title: 'Track GRNs',
+            description: 'All confirmed GRNs for a supplier are linked and visible in the Purchasing list',
+          },
+          {
+            title: 'Purchase Returns',
+            description: 'If goods need to be returned to supplier, process via Purchase Returns',
+          },
+        ]}
       />
 
       <div className="flex items-center gap-3 mb-4">

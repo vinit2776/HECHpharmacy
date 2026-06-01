@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Package, Snowflake } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -93,6 +94,28 @@ export default function DrugsPage() {
         action={
           <Button onClick={() => router.push('/drugs/new')}>+ Add Drug</Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-drugs"
+        steps={[
+          {
+            title: 'Add Drug',
+            description: 'Register a new drug with name, schedule (H/H1/G/X), category, GST rate and reorder level',
+          },
+          {
+            title: 'Purchase Stock',
+            description: 'Go to Purchasing to create a GRN; each confirmed GRN adds batch stock for this drug',
+          },
+          {
+            title: 'Available in Billing',
+            description: 'Registered drugs with stock appear in the Billing search automatically',
+          },
+          {
+            title: 'Monitor & Update',
+            description: 'Update drug details (reorder levels, discounts) as needed from this list',
+          },
+        ]}
       />
 
       <div className="flex items-center gap-3 mb-4">

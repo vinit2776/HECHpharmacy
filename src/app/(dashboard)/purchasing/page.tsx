@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -44,6 +45,28 @@ export default function PurchasingPage() {
             <Plus className="w-4 h-4 mr-2" /> New Purchase
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-purchasing"
+        steps={[
+          {
+            title: 'New Purchase (GRN)',
+            description: 'Click "New Purchase" to start recording a supplier delivery',
+          },
+          {
+            title: 'Add Drug Items',
+            description: 'For each drug received, add batch number, expiry date, quantity and rate',
+          },
+          {
+            title: 'Confirm GRN',
+            description: 'Confirming locks the record and updates inventory stock levels',
+          },
+          {
+            title: 'Purchase Return',
+            description: 'If items are defective or wrong, process via Purchase Returns menu',
+          },
+        ]}
       />
 
       <div className="flex gap-3 mb-4">

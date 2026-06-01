@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
@@ -462,6 +463,28 @@ export default function SalesReturnsPage() {
             Initiate Return
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-sales-returns"
+        steps={[
+          {
+            title: 'Find Original Bill',
+            description: 'Search by bill number or patient name to locate the sale to be reversed',
+          },
+          {
+            title: 'Select Return Items',
+            description: 'Choose which drugs (and quantities) the patient is returning',
+          },
+          {
+            title: 'Verify & Approve',
+            description: 'Review the return amount; Schedule H/H1 drug returns require extra care',
+          },
+          {
+            title: 'Stock Restored',
+            description: 'Approved returns add the returned quantity back to inventory automatically',
+          },
+        ]}
       />
 
       {loading ? (

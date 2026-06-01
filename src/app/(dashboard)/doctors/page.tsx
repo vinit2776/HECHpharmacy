@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Stethoscope } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -131,6 +132,28 @@ export default function DoctorsPage() {
             + Add Doctor
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-doctors"
+        steps={[
+          {
+            title: 'Add Doctor',
+            description: 'Register a doctor with name, specialisation, registration number and contact.',
+          },
+          {
+            title: 'Link to Patients',
+            description: 'Patients registered in the system can be linked to their treating doctor.',
+          },
+          {
+            title: 'Prescription Source',
+            description: "During billing, the doctor's name appears if the patient has a linked doctor.",
+          },
+          {
+            title: 'Audit Trail',
+            description: 'Doctor linkage is recorded on every bill for regulatory and reporting purposes.',
+          },
+        ]}
       />
 
       <div className="flex items-center gap-3 mb-4">

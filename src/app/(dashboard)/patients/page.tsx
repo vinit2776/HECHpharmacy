@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { SearchInput } from '@/components/shared/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -168,6 +169,28 @@ export default function PatientsPage() {
             + Register Patient
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-patients"
+        steps={[
+          {
+            title: 'Register Patient',
+            description: 'Add a patient with their Hospital ID, name, age, and BPL/General category',
+          },
+          {
+            title: 'Link to Billing',
+            description: 'During billing, search the patient by name or Hospital ID to apply discounts',
+          },
+          {
+            title: 'BPL Discounts',
+            description: 'BPL category patients automatically receive configured drug discounts at billing',
+          },
+          {
+            title: 'View History',
+            description: 'Click any patient to see their full billing history and prescription records',
+          },
+        ]}
       />
 
       <div className="flex items-center gap-3 mb-4">

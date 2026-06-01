@@ -5,6 +5,7 @@ import { format, startOfMonth } from 'date-fns'
 import { Printer, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { LifecycleGuide } from '@/components/shared/LifecycleGuide'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,6 +90,32 @@ export default function Form18Page() {
             Print
           </Button>
         }
+      />
+
+      <LifecycleGuide
+        storageKey="lifecycle-form18"
+        steps={[
+          {
+            title: 'Auto-populated',
+            description:
+              'Form 18 entries are automatically created from confirmed bills containing Schedule H/H1 drugs',
+          },
+          {
+            title: 'Filter by Date',
+            description:
+              'Use the date range filter to view entries for the required inspection period',
+          },
+          {
+            title: 'Prescription Check',
+            description:
+              'Each entry records the patient name, doctor, and prescription details for H1 drugs',
+          },
+          {
+            title: 'Print / Export',
+            description:
+              'Download or print for submission to the Drug Inspector during inspection',
+          },
+        ]}
       />
 
       {/* Date range filter */}
