@@ -523,6 +523,7 @@ model Report {
   periodLabel     String       @map("period_label")
   format          String
   filePath        String?      @map("file_path")
+  fileData        Bytes?       @map("file_data")
   fileSizeBytes   Int?         @map("file_size_bytes")
   generatedAt     DateTime?    @map("generated_at")
   errorMessage    String?      @map("error_message")

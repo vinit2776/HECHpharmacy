@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, ALL_ROLES, SUPER_ADMIN_ROLES } from '@/lib/auth-utils'
+import { requireRole, ALL_ROLES, MANAGER_ROLES } from '@/lib/auth-utils'
 import { drugSchema } from '@/lib/validations/drug'
 
 export async function GET(req: Request) {
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    await requireRole(SUPER_ADMIN_ROLES)
+    await requireRole(MANAGER_ROLES)
 
     const body = await req.json()
     const parsed = drugSchema.safeParse(body)

@@ -37,29 +37,37 @@ export async function generateReport(reportDbId: string): Promise<void> {
 
     fs.mkdirSync(path.dirname(fullPath), { recursive: true })
 
+    let fileBuffer: Buffer
+
     if (report.format === 'pdf') {
       const { renderPDF } = await import('./renderers/pdf')
-      const buffer = await renderPDF(def.id, data)
-      fs.writeFileSync(fullPath, buffer)
+      fileBuffer = await renderPDF(def.id, data)
     } else if (report.format === 'xlsx') {
       const { renderExcel } = await import('./renderers/excel')
-      const buffer = await renderExcel(def.id, data)
-      fs.writeFileSync(fullPath, buffer)
+      fileBuffer = await renderExcel(def.id, data)
     } else if (report.format === 'csv') {
       const { renderCSV } = await import('./renderers/csv')
-      const content = renderCSV(def.id, data)
-      fs.writeFileSync(fullPath, content, 'utf-8')
-    } else if (report.format === 'json') {
-      fs.writeFileSync(fullPath, JSON.stringify(data, null, 2), 'utf-8')
+      fileBuffer = Buffer.from(renderCSV(def.id, data), 'utf-8')
+    } else {
+      fileBuffer = Buffer.from(JSON.stringify(data, null, 2), 'utf-8')
     }
 
-    const stat = fs.statSync(fullPath)
+    // Store in DB (works on Vercel where /tmp is ephemeral per-invocation)
+    // Also write to local filesystem as a fallback for self-hosted
+    try {
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true })
+      fs.writeFileSync(fullPath, fileBuffer)
+    } catch {
+      // filesystem write is best-effort; DB copy is the primary store
+    }
+
     await prisma.report.update({
       where: { id: reportDbId },
       data: {
         status: 'ready',
         filePath,
-        fileSizeBytes: stat.size,
+        fileData: new Uint8Array(fileBuffer),
+        fileSizeBytes: fileBuffer.length,
         generatedAt: new Date(),
       },
     })

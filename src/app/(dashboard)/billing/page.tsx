@@ -14,6 +14,8 @@ import {
   Trash2,
   UserX,
   Loader2,
+  Stethoscope,
+  AlertTriangle,
 } from 'lucide-react'
 
 import { useBillingStore, CartItem } from '@/store/billingStore'
@@ -120,6 +122,14 @@ function StepPatient() {
   const [results, setResults] = useState<PatientResult[]>([])
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [doctors, setDoctors] = useState<{ id: string; name: string; registrationNo: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/doctors?isActive=true')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setDoctors(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
 
   const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
@@ -260,6 +270,41 @@ function StepPatient() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Doctor selector */}
+      {patient && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+            <Stethoscope className="w-4 h-4" />
+            Doctor / Prescribing Physician
+            <span className="text-red-500 ml-0.5">*</span>
+            <span className="text-xs text-slate-400 font-normal ml-1">(required for Schedule H/H1 drugs)</span>
+          </Label>
+          <Select
+            value={prescription?.doctorId ?? 'none'}
+            onValueChange={(val) => {
+              if (val === 'none') {
+                setPrescription({ source: 'external', doctorId: undefined, doctorName: undefined, prescriptionNo: prescription?.prescriptionNo })
+              } else {
+                const doc = doctors.find((d) => d.id === val)
+                setPrescription({ source: 'internal', doctorId: doc?.id, doctorName: doc?.name, prescriptionNo: prescription?.prescriptionNo })
+              }
+            }}
+          >
+            <SelectTrigger className="max-w-sm">
+              <SelectValue placeholder="Select doctor…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— No doctor / External prescription —</SelectItem>
+              {doctors.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  Dr. {d.name} ({d.registrationNo})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
 
       {/* Prescription number */}
@@ -736,6 +781,7 @@ function StepReview() {
   const scheduleHDrugs = items.filter(
     (i) => i.schedule?.toUpperCase() === 'H' || i.schedule?.toUpperCase() === 'H1'
   )
+  const needsDoctor = scheduleHDrugs.length > 0 && !prescription?.doctorId
 
   const handleConfirm = async () => {
     setSubmitting(true)
@@ -910,11 +956,24 @@ function StepReview() {
         />
       </div>
 
+      {/* H/H1 doctor guard */}
+      {needsDoctor && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold">Doctor required for Schedule H/H1 items</p>
+            <p className="mt-0.5 text-amber-700">
+              Go back to Step 1 and select the prescribing doctor before confirming this bill.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3 pt-2">
         <Button variant="outline" onClick={() => setStep(2)}>
           Back
         </Button>
-        <Button onClick={() => setConfirmOpen(true)} className="ml-auto gap-2">
+        <Button onClick={() => setConfirmOpen(true)} disabled={needsDoctor} className="ml-auto gap-2">
           <CheckCircle2 className="w-4 h-4" />
           Confirm Bill
         </Button>

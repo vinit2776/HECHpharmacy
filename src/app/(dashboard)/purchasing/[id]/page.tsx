@@ -25,7 +25,6 @@ export default function GrnDetailPage() {
   const [grn, setGrn] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [returnOpen, setReturnOpen] = useState(false)
-  const [returning, setReturning] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -37,23 +36,9 @@ export default function GrnDetailPage() {
 
   useEffect(() => { load() }, [id])
 
-  async function initiateReturn() {
-    setReturning(true)
-    try {
-      const r = await fetch('/api/returns/purchases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grnId: id, reason: 'Purchase return initiated from GRN detail' }),
-      })
-      if (!r.ok) throw new Error('Failed to initiate return')
-      toast.success('Purchase return initiated — awaiting manager approval')
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setReturning(false)
-      setReturnOpen(false)
-    }
+  function initiateReturn() {
+    setReturnOpen(false)
+    router.push(`/returns/purchases?grnId=${id}`)
   }
 
   if (loading) {
@@ -79,7 +64,7 @@ export default function GrnDetailPage() {
         breadcrumb={[{ label: 'Purchases', href: '/purchasing' }, { label: grn.grnNumber }]}
         action={
           grn.status === 'confirmed' ? (
-            <Button variant="outline" onClick={() => setReturnOpen(true)}>
+            <Button variant="outline" onClick={() => router.push(`/returns/purchases?grnId=${id}`)}>
               <RotateCcw className="w-4 h-4 mr-2" /> Initiate Return
             </Button>
           ) : null
@@ -202,11 +187,10 @@ export default function GrnDetailPage() {
         open={returnOpen}
         onOpenChange={setReturnOpen}
         title="Initiate Purchase Return?"
-        consequence={`• A purchase return request will be raised for GRN ${grn.grnNumber}\n• The return requires manager approval before stock is decremented\n• You cannot undo this action once submitted`}
-        confirmLabel="Submit Return Request"
+        consequence={`• You will be taken to the Purchase Returns page for GRN ${grn.grnNumber}\n• Select the items and quantities to return, then submit for manager approval`}
+        confirmLabel="Go to Returns Form"
         cancelLabel="Cancel"
         onConfirm={initiateReturn}
-        loading={returning}
       />
     </div>
   )

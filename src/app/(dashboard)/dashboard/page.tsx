@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   // Compute payment mode breakdown %
   const totalCollected = stats?.netCollectedToday ?? 0
-  const paymentModes = stats ? Object.entries(stats.collectionsByPaymentMode) : []
+  const paymentModes = stats?.collectionsByPaymentMode ? Object.entries(stats.collectionsByPaymentMode) : []
 
   return (
     <div>

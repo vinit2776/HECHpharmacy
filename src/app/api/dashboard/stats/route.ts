@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, MANAGER_ROLES } from '@/lib/auth-utils'
+import { requireRole, ALL_ROLES } from '@/lib/auth-utils'
 import { startOfDay, endOfDay, addDays } from 'date-fns'
 
 export async function GET(req: Request) {
   try {
-    await requireRole(MANAGER_ROLES)
+    await requireRole(ALL_ROLES)
 
     const now = new Date()
     const todayStart = startOfDay(now)
