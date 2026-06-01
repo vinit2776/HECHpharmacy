@@ -8,7 +8,6 @@ import { Printer, XCircle, RotateCcw, ArrowLeft, Loader2 } from 'lucide-react'
 
 import { LifecycleBanner } from '@/components/shared/LifecycleBanner'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { ConfirmGate } from '@/components/shared/ConfirmGate'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BillPDF, type PharmacyInfo } from '@/components/print/BillPDF'
 
@@ -16,6 +15,14 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -117,6 +124,7 @@ export default function BillDetailPage() {
   const [loading, setLoading] = useState(true)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
   const [pharmacy, setPharmacy] = useState<PharmacyInfo | null>(null)
 
   useEffect(() => {
@@ -138,18 +146,26 @@ export default function BillDetailPage() {
   }, [id])
 
   const handleCancel = async () => {
-    if (!bill) return
+    if (!bill || !cancelReason.trim()) return
     setCancelling(true)
     try {
-      const res = await fetch(`/api/billing/bills/${bill.id}/cancel`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to cancel bill')
+      const res = await fetch(`/api/billing/bills/${bill.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error ?? 'Failed to cancel bill')
+      }
       toast.success(`Bill ${bill.billNumber} cancelled`)
       setBill((prev) => prev ? { ...prev, status: 'cancelled' } : prev)
-    } catch {
-      toast.error('Failed to cancel bill')
+      setCancelOpen(false)
+      setCancelReason('')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to cancel bill')
     } finally {
       setCancelling(false)
-      setCancelOpen(false)
     }
   }
 
@@ -418,17 +434,47 @@ export default function BillDetailPage() {
         </div>
       </div>
 
-      {/* Cancel confirm */}
-      <ConfirmGate
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        title="Cancel Bill"
-        consequence={`Cancel bill ${bill.billNumber} for ${bill.patient?.name ?? 'Walk-in Patient'}?\n\nNet amount ${INR(bill.totalAmount)} will be voided and stock reversed. This action cannot be undone.`}
-        confirmLabel="Yes, Cancel Bill"
-        destructive
-        onConfirm={handleCancel}
-        loading={cancelling}
-      />
+      {/* Cancel confirm — requires a reason */}
+      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!open) { setCancelOpen(false); setCancelReason('') } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Bill</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <p className="text-sm text-slate-600">
+              Cancel <span className="font-mono font-medium">{bill.billNumber}</span> for{' '}
+              <span className="font-medium">{bill.patient?.name ?? 'Walk-in Patient'}</span>?{' '}
+              Net amount <span className="font-medium">{INR(bill.totalAmount)}</span> will be voided and stock reversed.
+              This action cannot be undone.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="cancel-reason">
+                Cancellation Reason <span className="text-red-500">*</span>
+              </Label>
+              <textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Patient changed mind, wrong drug dispensed…"
+                rows={3}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setCancelOpen(false); setCancelReason('') }} disabled={cancelling}>
+              Keep Bill
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelling || !cancelReason.trim()}
+            >
+              {cancelling ? 'Cancelling…' : 'Yes, Cancel Bill'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Suppress sidebar in print */}
       <style jsx global>{`

@@ -61,6 +61,7 @@ interface BillItem {
   quantity: number
   mrpPerUnit: number
   discountPct: number
+  lineNetAmount: number   // actual amount paid incl. GST — used for refund calculation
 }
 
 interface Bill {
@@ -162,7 +163,9 @@ function InitiateReturnDialog({
       .filter((item) => (returnQtys[item.id] ?? 0) > 0)
       .map((item) => {
         const qty = returnQtys[item.id]
-        const refundAmount = qty * item.mrpPerUnit * (1 - (item.discountPct ?? 0) / 100)
+        // Refund = proportional share of the actual line net amount (incl. GST + discount)
+        const perUnitNet = item.lineNetAmount / item.quantity
+        const refundAmount = qty * perUnitNet
         return {
           billItemId: item.id,
           drugId: item.drugId,
