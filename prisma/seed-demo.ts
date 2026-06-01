@@ -7,7 +7,7 @@
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { subDays, subMonths, addMonths, addDays } from 'date-fns'
 
@@ -918,8 +918,8 @@ async function main() {
         action: e.action,
         tableName: e.tableName,
         recordId: e.recordId,
-        beforeData: e.beforeData ?? null,
-        afterData: e.afterData ?? null,
+        beforeData: e.beforeData ?? Prisma.JsonNull,
+        afterData: e.afterData ?? Prisma.JsonNull,
         ipAddress: '127.0.0.1',
         createdAt: e.createdAt,
       },

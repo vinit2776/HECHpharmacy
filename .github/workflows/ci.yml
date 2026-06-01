@@ -1,42 +1,57 @@
 name: CI
 
+# Defensive checks only — lint, typecheck, build.
+# This does NOT deploy. Deployment is handled automatically by Vercel's
+# GitHub App on every push to main. This workflow just catches errors
+# before they reach main, giving a green/red check on each pull request.
+
 on:
-  push:
-    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
+  push:
     branches: [main, develop]
 
 jobs:
-  lint-and-build:
-    name: Lint & Build
+  build:
+    name: Lint, Typecheck & Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Self-contained dummy values so the build never depends on GitHub
+      # Secrets. No real database is contacted — pages are server-rendered
+      # on demand, not at build time, so these are never used to connect.
+      # (Real secrets live in the Vercel project dashboard, used only at
+      #  actual deploy time by Vercel's GitHub App.)
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+      NEXTAUTH_SECRET: "ci-dummy-secret-not-used-for-anything-real-32chars"
+      AUTH_SECRET: "ci-dummy-secret-not-used-for-anything-real-32chars"
+      NEXTAUTH_URL: "http://localhost:3000"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history so next.config.mjs can read git metadata for build info
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Generate Prisma client
         run: npx prisma generate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Lint
         run: npm run lint
 
-      - name: Type check
+      - name: Typecheck
         run: npx tsc --noEmit
 
       - name: Build
         run: npm run build
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
