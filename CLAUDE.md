@@ -10,6 +10,38 @@ HECH is an Eye Hospital Eye Care Pharmacy Management System — a Next.js 14 (Ap
 
 All development and testing must be done locally. Never deploy or push to the live/production environment without explicit user approval.
 
+## Collaboration & Git Hygiene
+
+**This is a shared repository with more than one developer.** As of this milestone, a second co-developer (`charidevops`) contributes alongside the owner (`vinit2776`). Both may push to `main`, so the remote can move between your sessions.
+
+**ALWAYS sync with the remote BEFORE starting any local work or push.** Skipping this causes divergent branches, failed pushes, and merge conflicts. Run this at the start of every session and again before every push:
+
+```bash
+git fetch origin
+git status                         # confirm where you are vs origin/main
+git log --oneline HEAD..origin/main   # show any incoming commits you don't have
+```
+
+If `origin/main` is ahead of you, integrate before doing anything else:
+
+```bash
+git stash            # if you have uncommitted local work
+git pull --ff-only origin main   # or: git rebase origin/main
+git stash pop        # restore your work on top of the latest
+```
+
+Rules:
+- **Never `git push` without a fresh `git fetch` first.** If the push is rejected as non-fast-forward, STOP — pull/rebase, re-verify the build, then push. Never force-push `main`.
+- **Never `git reset --hard` while uncommitted work exists** — stash it first. Other developers' commits and your own WIP are both easy to destroy.
+- **Run `npm run build` and `npx tsc --noEmit` locally before every push.** A red build on `main` blocks the Vercel deploy for everyone (this has already happened once — a `prisma/seed-demo.ts` JSON-null type error broke the deploy). CI on PRs (`.github/workflows/ci.yml`) is the safety net, but check locally first.
+- **Prefer feature branches + PRs** over pushing straight to `main` for non-trivial work, so CI runs and the other developer can review.
+
+## CI / CD Pipeline
+
+- **CI** = `.github/workflows/ci.yml` — runs lint + typecheck + build on every PR and push. Uses self-contained dummy env vars; needs **no GitHub Secrets**.
+- **CD** = **Vercel GitHub App integration** — auto-deploys every push to `main` within ~45s. There is **no** GitHub Actions deploy workflow, no `VERCEL_TOKEN`, no `.vercel/` directory in the repo, and no deployment secrets in GitHub. Real env vars (`DATABASE_URL`, `AUTH_SECRET`, etc.) live only in the Vercel project dashboard.
+- **Do not** add a `deploy.yml`, run `npx vercel link`, or duplicate deploy secrets into GitHub. Deployment is already fully automatic via the Vercel GitHub App.
+
 ## Commands
 
 ```bash
