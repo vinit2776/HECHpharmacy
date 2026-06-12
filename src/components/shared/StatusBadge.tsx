@@ -38,6 +38,8 @@ const variantStyles: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-800 border-amber-200',
   near_expiry: 'bg-amber-100 text-amber-800 border-amber-200',
   bpl: 'bg-amber-100 text-amber-800 border-amber-200',
+  registered: 'bg-blue-100 text-blue-800 border-blue-200',
+  'walk-in': 'bg-slate-100 text-slate-600 border-slate-200',
   cancelled: 'bg-red-100 text-red-800 border-red-200',
   rejected: 'bg-red-100 text-red-800 border-red-200',
   failed: 'bg-red-100 text-red-800 border-red-200',
@@ -70,6 +72,8 @@ const variantLabels: Record<string, string> = {
   inactive: 'Inactive',
   bpl: 'BPL',
   general: 'General',
+  registered: 'Registered',
+  'walk-in': 'Walk-in',
   pending_approval: 'Pending Approval',
 }
 
