@@ -38,6 +38,8 @@ interface BillCreateInput {
     netAmount: number
     paymentMode: 'cash' | 'upi' | 'card' | 'credit'
     paymentReference?: string
+    walkinName?: string
+    walkinPhone?: string
   }
   items: BillItemInput[]
   patientName: string

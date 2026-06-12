@@ -45,10 +45,13 @@ interface BillingState {
   items: CartItem[]
   paymentMode: 'cash' | 'upi' | 'card' | 'credit'
   paymentReference: string
+  walkinName: string
+  walkinPhone: string
 
   setStep: (step: number) => void
   setPatient: (patient: PatientInfo | null) => void
   setPrescription: (prescription: PrescriptionInfo) => void
+  setWalkinDetails: (name: string, phone: string) => void
   addItem: (item: CartItem) => void
   updateItem: (drugId: string, batchId: string, updates: Partial<CartItem>) => void
   removeItem: (drugId: string, batchId: string) => void
@@ -69,6 +72,8 @@ const initialState = {
   items: [] as CartItem[],
   paymentMode: 'cash' as const,
   paymentReference: '',
+  walkinName: '',
+  walkinPhone: '',
 }
 
 export const useBillingStore = create<BillingState>((set, get) => ({
@@ -77,6 +82,7 @@ export const useBillingStore = create<BillingState>((set, get) => ({
   setStep: (step) => set({ step }),
   setPatient: (patient) => set({ patient }),
   setPrescription: (prescription) => set({ prescription }),
+  setWalkinDetails: (name, phone) => set({ walkinName: name, walkinPhone: phone }),
 
   addItem: (item) =>
     set((state) => {
