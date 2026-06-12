@@ -33,6 +33,7 @@ export interface BillPDFProps {
     patient: {
       name: string
       hospitalPatientId: string
+      phone?: string | null
       age?: number
       gender?: string
       patientCategory: string
@@ -99,12 +100,11 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
           {/* Hospital Header */}
           <div className="text-center mb-3">
             <p className="text-[15px] font-bold tracking-wide uppercase">{name}</p>
-            {(dlNo || gstin) && (
-              <p className="text-[9px] text-slate-600 mt-0.5">
-                {dlNo && <>Drug License No: {dlNo}</>}
-                {dlNo && gstin && <>&nbsp;|&nbsp;</>}
-                {gstin && <>GSTIN: {gstin}</>}
-              </p>
+            {gstin && (
+              <p className="text-[10px] font-semibold text-slate-700 mt-0.5">GSTIN: {gstin}</p>
+            )}
+            {dlNo && (
+              <p className="text-[9px] text-slate-600">Drug License No: {dlNo}</p>
             )}
             {(address || phone) && (
               <p className="text-[9px] text-slate-600">
@@ -135,7 +135,12 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
             </div>
             <div className="space-y-1">
               <div><span className="font-bold">Patient  :</span> {bill.patient.name}</div>
-              <div><span className="font-bold">UHID     :</span> {bill.patient.hospitalPatientId}</div>
+              {bill.patient.hospitalPatientId && (
+                <div><span className="font-bold">UHID     :</span> {bill.patient.hospitalPatientId}</div>
+              )}
+              {bill.patient.phone && (
+                <div><span className="font-bold">Mobile   :</span> {bill.patient.phone}</div>
+              )}
               {(bill.patient.age != null || bill.patient.gender) && (
                 <div>
                   <span className="font-bold">Age/Sex  :</span>{' '}
@@ -145,7 +150,11 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               )}
               <div>
                 <span className="font-bold">Category :</span>{' '}
-                <span className="capitalize">{bill.patient.patientCategory}</span>
+                {!bill.patient.hospitalPatientId
+                  ? 'Walk-in'
+                  : bill.patient.patientCategory === 'bpl'
+                  ? 'BPL'
+                  : 'Registered'}
               </div>
               {bill.doctor && (
                 <div><span className="font-bold">Doctor   :</span> {bill.doctor.name}</div>
@@ -172,7 +181,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Batch</th>
                 <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Exp</th>
                 <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Qty</th>
-                <th className="text-right py-1.5 px-1 font-bold text-[9.5px]">MRP</th>
+                <th className="text-right py-1.5 px-1 font-bold text-[9.5px]">Rate</th>
                 <th className="text-right py-1.5 px-1 font-bold text-[9.5px]">Disc%</th>
                 <th className="text-right py-1.5 pl-1 font-bold text-[9.5px]">Net</th>
               </tr>
@@ -224,10 +233,16 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 </div>
               )}
               {bill.totalGst > 0 && (
-                <div className="flex justify-between text-slate-600">
-                  <span>GST</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-slate-600">
+                    <span>CGST</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst / 2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>SGST</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst / 2)}</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between font-bold text-[13px] border-t-2 border-slate-700 pt-1.5 mt-1">
                 <span>Net Payable</span>
@@ -245,6 +260,10 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               Thank you for choosing HCEH Eye Hospital
             </p>
             <p>This is a computer generated bill. No signature required.</p>
+            <p className="text-[8.5px] text-slate-500 mt-1 leading-snug italic">
+              Medicines once sold will not be taken back or exchanged without a valid receipt
+              and original packaging. Refrigerated items cannot be returned.
+            </p>
           </div>
         </div>
       </>
