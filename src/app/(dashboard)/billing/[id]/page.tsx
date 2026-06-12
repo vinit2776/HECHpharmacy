@@ -438,8 +438,9 @@ export default function BillDetailPage() {
               paymentMode:   bill.paymentMode,
               prescriptionNo: bill.prescriptionNo,
               patient: {
-                name:              bill.patient?.name ?? 'Walk-in Patient',
+                name:              bill.walkinName || bill.patient?.name || 'Walk-in Patient',
                 hospitalPatientId: bill.patient?.hospitalPatientId ?? '',
+                phone:             bill.walkinPhone || bill.patient?.phone,
                 age:               bill.patient?.age,
                 gender:            bill.patient?.gender,
                 patientCategory:   bill.patient?.patientCategory ?? 'general',
