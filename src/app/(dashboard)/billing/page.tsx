@@ -182,7 +182,7 @@ function StepPatient() {
       name: 'Walk-in Patient',
       patientCategory: 'general',
     })
-    setStep(2)
+    // Stay on step 1 so the doctor/prescription fields are visible before proceeding
   }
 
   const canProceed = !!patient

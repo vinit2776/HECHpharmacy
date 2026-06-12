@@ -84,6 +84,7 @@ interface Bill {
     name: string
     hospitalPatientId?: string
     patientCategory?: string
+    phone?: string
     age?: number
     gender?: string
   }
@@ -276,14 +277,22 @@ export default function BillDetailPage() {
                   {bill.patient.hospitalPatientId && (
                     <p className="text-xs text-slate-400 font-mono">{bill.patient.hospitalPatientId}</p>
                   )}
-                  {bill.patient.patientCategory && (
-                    <div className="mt-1">
-                      <StatusBadge status={bill.patient.patientCategory} />
-                    </div>
+                  {bill.patient.phone && (
+                    <p className="text-xs text-slate-500 mt-0.5">{bill.patient.phone}</p>
                   )}
+                  <div className="mt-1">
+                    <StatusBadge
+                      status={bill.patient.patientCategory === 'bpl' ? 'bpl' : 'registered'}
+                    />
+                  </div>
                 </>
               ) : (
-                <p className="text-slate-500">Walk-in Patient</p>
+                <>
+                  <p className="text-slate-500">Walk-in Patient</p>
+                  <div className="mt-1">
+                    <StatusBadge status="walk-in" />
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -326,9 +335,10 @@ export default function BillDetailPage() {
                 <TableHead>Drug</TableHead>
                 <TableHead>Batch / Expiry</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">MRP/unit</TableHead>
+                <TableHead className="text-right">Rate/unit</TableHead>
                 <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">GST</TableHead>
+                <TableHead className="text-right">CGST</TableHead>
+                <TableHead className="text-right">SGST</TableHead>
                 <TableHead className="text-right">Net</TableHead>
               </TableRow>
             </TableHeader>
@@ -356,7 +366,10 @@ export default function BillDetailPage() {
                     {item.discountPct > 0 ? `${item.discountPct}%` : '—'}
                   </TableCell>
                   <TableCell className="text-right text-slate-500">
-                    {item.gstRate > 0 ? `${item.gstRate}% (${INR(item.gstAmount)})` : '—'}
+                    {item.gstRate > 0 ? `${item.gstRate / 2}% (${INR(item.gstAmount / 2)})` : '—'}
+                  </TableCell>
+                  <TableCell className="text-right text-slate-500">
+                    {item.gstRate > 0 ? `${item.gstRate / 2}% (${INR(item.gstAmount / 2)})` : '—'}
                   </TableCell>
                   <TableCell className="text-right font-semibold">{INR(item.netAmount)}</TableCell>
                 </TableRow>
@@ -377,8 +390,12 @@ export default function BillDetailPage() {
               <span>− {INR(bill.totalDiscount)}</span>
             </div>
             <div className="flex justify-between text-slate-500">
-              <span>Total GST</span>
-              <span>{INR(bill.totalGst)}</span>
+              <span>Total CGST</span>
+              <span>{INR(bill.totalGst / 2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>Total SGST</span>
+              <span>{INR(bill.totalGst / 2)}</span>
             </div>
             <Separator className="my-1" />
             <div className="flex justify-between font-bold text-base">
