@@ -79,6 +79,8 @@ interface Bill {
   status: 'active' | 'cancelled' | 'returned'
   paymentMode: string
   notes?: string
+  walkinName?: string | null
+  walkinPhone?: string | null
   patient?: {
     id: string
     name: string
@@ -273,16 +275,29 @@ export default function BillDetailPage() {
               <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Patient</p>
               {bill.patient ? (
                 <>
-                  <p className="font-semibold text-slate-900">{bill.patient.name}</p>
+                  <p className="font-semibold text-slate-900">
+                    {!bill.patient.hospitalPatientId
+                      ? (bill.walkinName || 'Walk-in Patient')
+                      : bill.patient.name}
+                  </p>
                   {bill.patient.hospitalPatientId && (
                     <p className="text-xs text-slate-400 font-mono">{bill.patient.hospitalPatientId}</p>
                   )}
-                  {bill.patient.phone && (
-                    <p className="text-xs text-slate-500 mt-0.5">{bill.patient.phone}</p>
+                  {/* Phone: walkin-captured phone takes priority, then registered patient phone */}
+                  {(bill.walkinPhone || bill.patient.phone) && (
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {bill.walkinPhone || bill.patient.phone}
+                    </p>
                   )}
                   <div className="mt-1">
                     <StatusBadge
-                      status={bill.patient.patientCategory === 'bpl' ? 'bpl' : 'registered'}
+                      status={
+                        !bill.patient.hospitalPatientId
+                          ? 'walk-in'
+                          : bill.patient.patientCategory === 'bpl'
+                          ? 'bpl'
+                          : 'registered'
+                      }
                     />
                   </div>
                 </>

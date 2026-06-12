@@ -117,7 +117,7 @@ interface DiscountPreviewResult {
 // ─── STEP 1: Patient ─────────────────────────────────────────────────────────
 
 function StepPatient() {
-  const { patient, prescription, setPatient, setPrescription, setStep } = useBillingStore()
+  const { patient, prescription, walkinName, walkinPhone, setPatient, setPrescription, setWalkinDetails, setStep } = useBillingStore()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PatientResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -270,6 +270,31 @@ function StepPatient() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Walk-in name + phone */}
+      {patient?.id === 'walkin-patient' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="walkin-name">Patient Name (optional)</Label>
+            <Input
+              id="walkin-name"
+              placeholder="e.g. Ramesh Kumar"
+              value={walkinName}
+              onChange={(e) => setWalkinDetails(e.target.value, walkinPhone)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="walkin-phone">Mobile Number (optional)</Label>
+            <Input
+              id="walkin-phone"
+              type="tel"
+              placeholder="e.g. 9876543210"
+              value={walkinPhone}
+              onChange={(e) => setWalkinDetails(walkinName, e.target.value)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Doctor selector */}
@@ -764,6 +789,8 @@ function StepReview() {
     prescription,
     items,
     paymentMode,
+    walkinName,
+    walkinPhone,
     setPaymentMode,
     setStep,
   } = useBillingStore()
@@ -793,6 +820,8 @@ function StepReview() {
         doctorId: prescription?.doctorId,
         paymentMode,
         notes,
+        walkinName: patient?.id === 'walkin-patient' && walkinName.trim() ? walkinName.trim() : undefined,
+        walkinPhone: patient?.id === 'walkin-patient' && walkinPhone.trim() ? walkinPhone.trim() : undefined,
         items: items.map((i) => ({
           drugId: i.drugId,
           batchId: i.batchId,
@@ -851,9 +880,16 @@ function StepReview() {
         <CardContent className="pt-4 space-y-2">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-slate-400" />
-            <span className="font-semibold text-slate-900">{patient?.name ?? 'Walk-in Patient'}</span>
-            <StatusBadge status={patient?.patientCategory ?? 'general'} />
+            <span className="font-semibold text-slate-900">
+              {patient?.id === 'walkin-patient'
+                ? walkinName.trim() || 'Walk-in Patient'
+                : patient?.name ?? 'Walk-in Patient'}
+            </span>
+            <StatusBadge status={patient?.id === 'walkin-patient' ? 'walk-in' : (patient?.patientCategory ?? 'general')} />
           </div>
+          {patient?.id === 'walkin-patient' && walkinPhone.trim() && (
+            <p className="text-sm text-slate-500 ml-6">{walkinPhone.trim()}</p>
+          )}
           {patient?.hospitalPatientId && (
             <p className="text-xs text-slate-500 font-mono ml-6">{patient.hospitalPatientId}</p>
           )}

@@ -77,6 +77,8 @@ export async function POST(req: Request) {
       prescriptionDate,
       paymentMode,
       paymentReference,
+      walkinName,
+      walkinPhone,
       items = [],
     } = body
 
@@ -187,6 +189,8 @@ export async function POST(req: Request) {
             netAmount,
             paymentMode,
             paymentReference: paymentReference ?? undefined,
+            walkinName: walkinName ?? undefined,
+            walkinPhone: walkinPhone ?? undefined,
           },
           items: resolvedItems,
           patientName: patient.name,

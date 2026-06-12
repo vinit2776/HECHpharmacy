@@ -342,6 +342,8 @@ model SalesBill {
   taxableAmount       Decimal            @db.Decimal(12, 2) @map("taxable_amount")
   totalGstAmount      Decimal            @db.Decimal(12, 2) @map("total_gst_amount")
   netAmount           Decimal            @db.Decimal(12, 2) @map("net_amount")
+  walkinName          String?            @map("walkin_name")
+  walkinPhone         String?            @map("walkin_phone")
   paymentMode         PaymentMode        @map("payment_mode")
   paymentReference    String?            @map("payment_reference")
   status              BillStatus         @default(active)

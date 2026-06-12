@@ -36,6 +36,8 @@ export async function GET(
     const totalGstNum = Number(bill.totalGstAmount)
     return NextResponse.json({
       ...bill,
+      walkinName: bill.walkinName ?? null,
+      walkinPhone: bill.walkinPhone ?? null,
       netAmount: netAmountNum,
       subtotalMrp: Number(bill.subtotalMrp),
       totalDiscountAmount: totalDiscountNum,
