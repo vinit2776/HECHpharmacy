@@ -1,4 +1,4 @@
-export type ReportCategory = 'management' | 'compliance' | 'gst' | 'trust'
+export type ReportCategory = 'management' | 'compliance' | 'gst' | 'trust' | 'internal'
 export type ReportFormat = 'pdf' | 'xlsx' | 'csv' | 'json'
 
 export interface ReportParam {
@@ -177,6 +177,15 @@ export const REPORT_REGISTRY: ReportDefinition[] = [
     formats: ['pdf'],
     params: [{ key: 'year', label: 'Year', type: 'year', required: true }],
     retention_days: 3650,
+    statutory: false,
+  },
+  {
+    id: 'dept-drug-consumption',
+    name: 'Department Drug Consumption',
+    category: 'internal',
+    formats: ['pdf', 'xlsx'],
+    params: [{ key: 'date_range', label: 'Date Range', type: 'date_range', required: true }],
+    retention_days: 365,
     statutory: false,
   },
 ]

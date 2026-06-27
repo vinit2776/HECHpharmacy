@@ -139,7 +139,9 @@ model User {
   purchReturnAppr  PurchaseReturn[] @relation("PReturnApprBy")
   reports          Report[]
   auditLogs        AuditLog[]
-  ticketsReported  SupportTicket[] @relation("TicketsReported")
+  ticketsReported  SupportTicket[]  @relation("TicketsReported")
+  irRequested      InternalRequisition[] @relation("IRRequestedBy")
+  irApproved       InternalRequisition[] @relation("IRApprovedBy")
 
   @@map("users")
 }
@@ -175,6 +177,7 @@ model Drug {
   purchReturnItems PurchaseReturnItem[]
   form17Entries    RegisterForm17[]
   form18Entries    RegisterForm18[]
+  irItems          InternalRequisitionItem[]
 
   @@map("drugs")
 }
@@ -223,7 +226,8 @@ model Doctor {
   createdAt      DateTime   @default(now()) @map("created_at")
 
   patients Patient[]
-  bills    SalesBill[]
+  bills                SalesBill[]
+  internalRequisitions InternalRequisition[]
 
   @@map("doctors")
 }
@@ -270,6 +274,7 @@ model InventoryBatch {
   billItems        SalesBillItem[]
   salesReturnItems SalesReturnItem[]
   purchReturnItems PurchaseReturnItem[]
+  irItems          InternalRequisitionItem[]
 
   @@map("inventory_batches")
 }
@@ -634,6 +639,79 @@ model SupportTicket {
   @@index([reporterId])
   @@index([createdAt])
   @@map("support_tickets")
+}
+
+// ─── Internal Requisition (Hospital Use) ─────────────────────────────────────
+
+enum InternalDept {
+  ot
+  general_ward
+  icu
+  casualty
+  pharmacy_own
+  other
+}
+
+enum IssuePurpose {
+  surgery
+  dept_stock
+  emergency
+  maintenance
+  other
+}
+
+enum ReqStatus {
+  draft
+  issued
+  cancelled
+}
+
+model InternalRequisition {
+  id                  String       @id @default(uuid())
+  requisitionNumber   String       @unique @map("requisition_number")
+  requisitionDate     DateTime     @map("requisition_date")
+  department          InternalDept
+  purpose             IssuePurpose
+  doctorId            String?      @map("doctor_id")
+  doctor              Doctor?      @relation(fields: [doctorId], references: [id])
+  requestedBy         String       @map("requested_by")
+  requestedByUser     User         @relation("IRRequestedBy", fields: [requestedBy], references: [id])
+  approvedBy          String?      @map("approved_by")
+  approvedByUser      User?        @relation("IRApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt          DateTime?    @map("approved_at")
+  status              ReqStatus    @default(draft)
+  cancellationReason  String?      @map("cancellation_reason")
+  notes               String?
+  totalCost           Decimal      @default(0) @db.Decimal(12, 2) @map("total_cost")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  items InternalRequisitionItem[]
+
+  @@index([status])
+  @@index([department])
+  @@index([requisitionDate])
+  @@map("internal_requisitions")
+}
+
+model InternalRequisitionItem {
+  id              String              @id @default(uuid())
+  requisitionId   String              @map("requisition_id")
+  requisition     InternalRequisition @relation(fields: [requisitionId], references: [id])
+  drugId          String              @map("drug_id")
+  drug            Drug                @relation(fields: [drugId], references: [id])
+  batchId         String              @map("batch_id")
+  batch           InventoryBatch      @relation(fields: [batchId], references: [id])
+  drugName        String              @map("drug_name")
+  batchNo         String              @map("batch_no")
+  expiryDate      DateTime            @map("expiry_date")
+  hsnCode         String              @map("hsn_code")
+  schedule        String
+  quantityIssued  Int                 @map("quantity_issued")
+  unitCost        Decimal             @db.Decimal(10, 2) @map("unit_cost")
+  totalCost       Decimal             @db.Decimal(10, 2) @map("total_cost")
+
+  @@map("internal_requisition_items")
 }
 
 model TicketAttachment {

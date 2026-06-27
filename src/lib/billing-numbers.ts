@@ -30,6 +30,12 @@ export async function generatePurchaseReturnNumberInTx(tx: any): Promise<string>
 
 // Convenience: retry a transaction callback on P2002 (unique constraint) up to maxAttempts.
 // Use when the transaction generates a sequential document number internally.
+export async function generateIRNumberInTx(tx: any): Promise<string> {
+  const prefix = `IR-${format(new Date(), 'yyyyMM')}-`
+  const count = await tx.internalRequisition.count({ where: { requisitionNumber: { startsWith: prefix } } })
+  return `${prefix}${String(count + 1).padStart(4, '0')}`
+}
+
 export async function withNumberRetry<T>(
   fn: () => Promise<T>,
   maxAttempts = 5

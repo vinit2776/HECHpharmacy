@@ -18,6 +18,7 @@ import {
   Eye,
   GitCommit,
   LifeBuoy,
+  FlaskConical,
 } from 'lucide-react'
 
 // ─── Build info footer ────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['manager', 'super_admin'] },
   { href: '/billing', label: 'Billing', icon: ShoppingCart, roles: ['counter_pharmacist', 'manager', 'super_admin'] },
+  { href: '/internal-use', label: 'Internal Use', icon: FlaskConical, roles: ['counter_pharmacist', 'purchase_pharmacist', 'manager', 'super_admin'] },
   { href: '/purchasing', label: 'Purchasing', icon: Package, roles: ['purchase_pharmacist', 'manager', 'super_admin'] },
   { href: '/inventory', label: 'Inventory', icon: Package, roles: ['counter_pharmacist', 'purchase_pharmacist', 'manager', 'super_admin'] },
   { href: '/patients', label: 'Patients', icon: Users, roles: ['counter_pharmacist', 'manager', 'super_admin'] },
