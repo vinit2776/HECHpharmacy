@@ -60,6 +60,7 @@ interface BillItem {
   id: string
   drugName: string
   schedule: string
+  hsnCode?: string
   batchNo: string
   expiryDate: string
   quantity: number
@@ -95,6 +96,7 @@ interface Bill {
     name: string
   }
   prescriptionNo?: string
+  servedByUser?: { name: string }
   items: BillItem[]
   subtotalMrp: number
   totalDiscount: number
@@ -433,10 +435,11 @@ export default function BillDetailPage() {
           <BillPDF
             pharmacy={pharmacy ?? undefined}
             bill={{
-              billNumber:    bill.billNumber,
-              createdAt:     bill.createdAt,
-              paymentMode:   bill.paymentMode,
+              billNumber:     bill.billNumber,
+              createdAt:      bill.createdAt,
+              paymentMode:    bill.paymentMode,
               prescriptionNo: bill.prescriptionNo,
+              servedBy:       bill.servedByUser?.name,
               patient: {
                 name:              bill.walkinName || bill.patient?.name || 'Walk-in Patient',
                 hospitalPatientId: bill.patient?.hospitalPatientId ?? '',
@@ -447,16 +450,20 @@ export default function BillDetailPage() {
               },
               doctor: bill.doctor ? { name: bill.doctor.name } : undefined,
               items: bill.items.map((item) => ({
-                drugName:    item.drugName,
-                schedule:    item.schedule,
-                batchNo:     item.batchNo,
-                expiryDate:  item.expiryDate
+                drugName:      item.drugName,
+                schedule:      item.schedule,
+                hsnCode:       item.hsnCode,
+                batchNo:       item.batchNo,
+                expiryDate:    item.expiryDate
                   ? format(new Date(item.expiryDate), 'MM/yy')
                   : '',
-                quantity:    item.quantity,
-                mrpPerUnit:  item.mrpPerUnit,
-                discountPct: item.discountPct,
-                netAmount:   item.netAmount,
+                quantity:      item.quantity,
+                mrpPerUnit:    item.mrpPerUnit,
+                discountPct:   item.discountPct,
+                taxableAmount: item.taxableAmount,
+                gstRate:       item.gstRate,
+                gstAmount:     item.gstAmount,
+                netAmount:     item.netAmount,
               })),
               grossAmount:   bill.subtotalMrp,
               totalDiscount: bill.totalDiscount,
