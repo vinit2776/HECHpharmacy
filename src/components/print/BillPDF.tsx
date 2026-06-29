@@ -3,76 +3,191 @@
 import React from 'react'
 import { format } from 'date-fns'
 
-const inr = (amount: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
+const inr = (v: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(v)
 
 const scheduleLabels: Record<string, string> = {
-  otc: 'OTC',
-  g: 'G',
-  h: 'H',
-  h1: 'H1',
-  e1: 'E1',
+  otc: 'OTC', g: 'G', h: 'H', h1: 'H1', e1: 'E1',
 }
 
+// ─── Amount in Words ──────────────────────────────────────────────────────────
+
+const ONES = [
+  '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+  'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+  'Seventeen', 'Eighteen', 'Nineteen',
+]
+const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+function numToWords(n: number): string {
+  if (n === 0) return ''
+  if (n < 20) return ONES[n]
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + ONES[n % 10] : '')
+  if (n < 1000) return ONES[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' And ' + numToWords(n % 100) : '')
+  if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '')
+  if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '')
+  return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '')
+}
+
+function amountInWords(amount: number): string {
+  const rounded = Math.round(amount * 100) / 100
+  const rupees = Math.floor(rounded)
+  const paise = Math.round((rounded - rupees) * 100)
+  let w = 'Rupees ' + (rupees === 0 ? 'Zero' : numToWords(rupees))
+  if (paise > 0) w += ' And ' + numToWords(paise) + ' Paise'
+  return w + ' Only'
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface PharmacyInfo {
-  pharmacyName:  string
-  address?:      string | null
-  city?:         string | null
-  state?:        string | null
-  pincode?:      string | null
-  phone?:        string | null
-  gstin?:        string | null
+  pharmacyName:   string
+  address?:       string | null
+  city?:          string | null
+  state?:         string | null
+  pincode?:       string | null
+  phone?:         string | null
+  gstin?:         string | null
   drugLicenseNo?: string | null
+  stateCode?:     string | null
+  stateName?:     string | null
 }
 
 export interface BillPDFProps {
   pharmacy?: PharmacyInfo
   bill: {
-    billNumber: string
-    createdAt: string
+    billNumber:     string
+    createdAt:      string
+    servedBy?:      string
     patient: {
-      name: string
+      name:              string
       hospitalPatientId: string
-      phone?: string | null
-      age?: number
-      gender?: string
-      patientCategory: string
+      phone?:            string | null
+      age?:              number
+      gender?:           string
+      patientCategory:   string
     }
-    doctor?: { name: string }
+    doctor?:        { name: string }
     prescriptionNo?: string
-    paymentMode: string
+    paymentMode:    string
     items: Array<{
-      drugName: string
-      schedule: string
-      batchNo: string
-      expiryDate: string
-      quantity: number
-      mrpPerUnit: number
-      discountPct: number
-      netAmount: number
+      drugName:      string
+      schedule:      string
+      hsnCode?:      string
+      batchNo:       string
+      expiryDate:    string
+      quantity:      number
+      mrpPerUnit:    number
+      discountPct:   number
+      taxableAmount?: number
+      gstRate?:      number
+      gstAmount?:    number
+      netAmount:     number
     }>
-    grossAmount: number
+    grossAmount:   number
     totalDiscount: number
-    totalGst: number
-    netPayable: number
+    totalGst:      number
+    netPayable:    number
   }
   className?: string
 }
 
+// ─── Table cell helpers ───────────────────────────────────────────────────────
+
+const TD = ({
+  children, right, center, bold, small, colSpan, rowSpan, style, className,
+}: {
+  children?: React.ReactNode
+  right?: boolean; center?: boolean; bold?: boolean; small?: boolean
+  colSpan?: number; rowSpan?: number
+  style?: React.CSSProperties; className?: string
+}) => (
+  <td
+    colSpan={colSpan}
+    rowSpan={rowSpan}
+    className={className}
+    style={{
+      border: '1px solid #475569',
+      padding: '3px 5px',
+      fontSize: small ? '8px' : '9.5px',
+      fontWeight: bold ? 700 : 400,
+      textAlign: right ? 'right' : center ? 'center' : 'left',
+      verticalAlign: 'top',
+      ...style,
+    }}
+  >
+    {children}
+  </td>
+)
+
+const TH = ({
+  children, right, center, colSpan, style,
+}: {
+  children?: React.ReactNode
+  right?: boolean; center?: boolean; colSpan?: number; style?: React.CSSProperties
+}) => (
+  <th
+    colSpan={colSpan}
+    style={{
+      border: '1px solid #475569',
+      padding: '4px 5px',
+      fontSize: '9px',
+      fontWeight: 700,
+      textAlign: right ? 'right' : center ? 'center' : 'left',
+      verticalAlign: 'middle',
+      backgroundColor: '#f8fafc',
+      ...style,
+    }}
+  >
+    {children}
+  </th>
+)
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
   function BillPDF({ bill, pharmacy, className }, ref) {
-    const billDate = format(new Date(bill.createdAt), 'dd/MM/yyyy HH:mm')
+    const billDate  = format(new Date(bill.createdAt), 'dd/MM/yyyy')
+    const billTime  = format(new Date(bill.createdAt), 'HH:mm')
 
-    const name    = pharmacy?.pharmacyName ?? 'HCEH Eye Hospital Pharmacy'
-    const dlNo    = pharmacy?.drugLicenseNo ?? ''
-    const gstin   = pharmacy?.gstin ?? ''
-    const address = [pharmacy?.address, pharmacy?.city, pharmacy?.state, pharmacy?.pincode]
+    const name      = pharmacy?.pharmacyName ?? 'HCEH Eye Hospital Pharmacy'
+    const dlNo      = pharmacy?.drugLicenseNo ?? ''
+    const gstin     = pharmacy?.gstin ?? ''
+    const stateCode = pharmacy?.stateCode ?? ''
+    const stateName = pharmacy?.stateName ?? pharmacy?.state ?? ''
+    const address   = [pharmacy?.address, pharmacy?.city, pharmacy?.state, pharmacy?.pincode]
       .filter(Boolean).join(', ')
-    const phone   = pharmacy?.phone ?? ''
+    const pharmPhone = pharmacy?.phone ?? ''
+
+    const totalQty   = bill.items.reduce((s, i) => s + i.quantity, 0)
+    const baseAmount = bill.netPayable - bill.totalGst  // taxable total
+    const cgst       = bill.totalGst / 2
+    const sgst       = bill.totalGst / 2
+
+    // GST category breakdown (group by gstRate)
+    const gstGroups = bill.items.reduce<Record<number, { base: number; gst: number; amount: number }>>(
+      (acc, item) => {
+        const rate = item.gstRate ?? 0
+        if (!acc[rate]) acc[rate] = { base: 0, gst: 0, amount: 0 }
+        acc[rate].base   += item.taxableAmount ?? 0
+        acc[rate].gst    += item.gstAmount ?? 0
+        acc[rate].amount += item.netAmount
+        return acc
+      },
+      {}
+    )
+
+    const isWalkIn = !bill.patient.hospitalPatientId
+    const category = isWalkIn ? 'Walk-in' : bill.patient.patientCategory === 'bpl' ? 'BPL' : 'Registered'
+
+    const tableStyle: React.CSSProperties = {
+      width: '100%',
+      borderCollapse: 'collapse',
+      tableLayout: 'fixed',
+    }
 
     return (
       <>
-        {/* Print styles */}
         <style>{`
           @media print {
             body * { visibility: hidden; }
@@ -82,189 +197,332 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               position: fixed;
               top: 0; left: 0;
               width: 100%;
-              /* Let @page margin handle the safe zone; no extra padding needed */
               padding: 0 !important;
               margin: 0 !important;
             }
             @page {
-              size: A5 portrait;
-              margin: 14mm;   /* printer-safe zone on all sides */
+              size: A4 portrait;
+              margin: 10mm;
             }
           }
         `}</style>
 
         <div
           ref={ref}
-          className={`bill-print-root bg-white text-slate-900 font-mono text-[11px] leading-relaxed p-5 w-[148mm] mx-auto ${className ?? ''}`}
+          className={`bill-print-root bg-white text-slate-900 font-sans text-[9.5px] leading-snug w-[190mm] mx-auto ${className ?? ''}`}
         >
-          {/* Hospital Header */}
-          <div className="text-center mb-3">
-            <p className="text-[15px] font-bold tracking-wide uppercase">{name}</p>
-            {gstin && (
-              <p className="text-[10px] font-semibold text-slate-700 mt-0.5">GSTIN: {gstin}</p>
-            )}
-            {dlNo && (
-              <p className="text-[9px] text-slate-600">Drug License No: {dlNo}</p>
-            )}
-            {(address || phone) && (
-              <p className="text-[9px] text-slate-600">
-                {address}
-                {address && phone && <>&nbsp;|&nbsp;</>}
-                {phone && <>Ph: {phone}</>}
-              </p>
-            )}
-          </div>
+          {/* ── 1. HOSPITAL HEADER ───────────────────────────────────────── */}
+          <table style={tableStyle}>
+            <tbody>
+              <tr>
+                {/* Left: hospital info */}
+                <td style={{
+                  border: '1px solid #475569', padding: '6px 10px',
+                  width: '65%', verticalAlign: 'top',
+                }}>
+                  <p style={{ fontSize: '15px', fontWeight: 800, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                    {name}
+                  </p>
+                  {address && (
+                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>{address}</p>
+                  )}
+                  {pharmPhone && (
+                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>Ph: {pharmPhone}</p>
+                  )}
+                  {dlNo && (
+                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>DL No: {dlNo}</p>
+                  )}
+                </td>
+                {/* Right: state + GSTIN */}
+                <td style={{
+                  border: '1px solid #475569', padding: '6px 10px',
+                  verticalAlign: 'top', textAlign: 'right',
+                }}>
+                  {stateCode && (
+                    <p style={{ fontSize: '9px', marginBottom: '2px' }}>State Code : <strong>{stateCode}</strong></p>
+                  )}
+                  {stateName && (
+                    <p style={{ fontSize: '9px', marginBottom: '2px' }}>State Name : <strong>{stateName}</strong></p>
+                  )}
+                  {gstin && (
+                    <p style={{ fontSize: '9px', fontWeight: 700 }}>GSTIN : {gstin}</p>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Cash Bill strip */}
-          <div className="border-t-2 border-b-2 border-slate-800 py-0.5 my-3 text-center text-[9px] text-slate-500 tracking-widest uppercase">
-            Cash Bill
-          </div>
+          {/* ── 2. BILL META ─────────────────────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+            <tbody>
+              {/* Row 1: patient "To", bill number, date, Tax Invoice label */}
+              <tr>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '30%', verticalAlign: 'top' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>To</p>
+                  <p style={{ fontSize: '10px', fontWeight: 700 }}>{bill.patient.name}</p>
+                  {bill.patient.hospitalPatientId && (
+                    <p style={{ fontSize: '8px', color: '#64748b', fontFamily: 'monospace' }}>
+                      UHID: {bill.patient.hospitalPatientId}
+                    </p>
+                  )}
+                  {bill.patient.phone && (
+                    <p style={{ fontSize: '8px', color: '#64748b' }}>Ph: {bill.patient.phone}</p>
+                  )}
+                  {(bill.patient.age != null || bill.patient.gender) && (
+                    <p style={{ fontSize: '8px', color: '#64748b' }}>
+                      {bill.patient.age != null ? `${bill.patient.age} yrs` : ''}
+                      {bill.patient.age != null && bill.patient.gender ? ' / ' : ''}
+                      {bill.patient.gender ?? ''}
+                    </p>
+                  )}
+                  <p style={{ fontSize: '8px', color: '#64748b' }}>Category: {category}</p>
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Terms</p>
+                  <p style={{ fontWeight: 700 }}>C-CASH BILL</p>
+                  {bill.prescriptionNo && (
+                    <p style={{ fontSize: '8px', color: '#64748b' }}>Rx No: {bill.prescriptionNo}</p>
+                  )}
+                  {bill.doctor && (
+                    <p style={{ fontSize: '8px', color: '#64748b' }}>Dr. {bill.doctor.name}</p>
+                  )}
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Bill No &amp; Page No</p>
+                  <p style={{ fontWeight: 700, fontFamily: 'monospace' }}>{bill.billNumber} &nbsp; 1/1</p>
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '15%', verticalAlign: 'top' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Bill Date</p>
+                  <p style={{ fontWeight: 700 }}>{billDate}</p>
+                  <p style={{ fontSize: '8px', color: '#64748b' }}>{billTime}</p>
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '15%', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    {gstin ? 'Tax Invoice' : 'Cash Bill'}
+                  </p>
+                </td>
+              </tr>
+              {/* Row 2: salesman */}
+              <tr>
+                <td style={{ border: '1px solid #475569', padding: '3px 8px' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Payment Mode</p>
+                  <p style={{ fontWeight: 600, textTransform: 'capitalize' }}>{bill.paymentMode}</p>
+                </td>
+                <td colSpan={2} style={{ border: '1px solid #475569', padding: '3px 8px' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Salesman Name</p>
+                  <p style={{ fontWeight: 600 }}>{bill.servedBy ?? '—'}</p>
+                </td>
+                <td colSpan={2} style={{ border: '1px solid #475569', padding: '3px 8px' }}>
+                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Delivery Type</p>
+                  <p style={{ fontWeight: 600 }}>Counter</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Bill Info + Patient Info */}
-          <div className="grid grid-cols-2 gap-x-5 mb-4 text-[10.5px]">
-            <div className="space-y-1">
-              <div><span className="font-bold">Bill No :</span> {bill.billNumber}</div>
-              <div><span className="font-bold">Date    :</span> {billDate}</div>
-              <div>
-                <span className="font-bold">Payment :</span>{' '}
-                <span className="capitalize">{bill.paymentMode}</span>
-              </div>
-              {bill.prescriptionNo && (
-                <div><span className="font-bold">Rx No   :</span> {bill.prescriptionNo}</div>
-              )}
-            </div>
-            <div className="space-y-1">
-              <div><span className="font-bold">Patient  :</span> {bill.patient.name}</div>
-              {bill.patient.hospitalPatientId && (
-                <div><span className="font-bold">UHID     :</span> {bill.patient.hospitalPatientId}</div>
-              )}
-              {bill.patient.phone && (
-                <div><span className="font-bold">Mobile   :</span> {bill.patient.phone}</div>
-              )}
-              {(bill.patient.age != null || bill.patient.gender) && (
-                <div>
-                  <span className="font-bold">Age/Sex  :</span>{' '}
-                  {bill.patient.age != null ? `${bill.patient.age} yrs` : '—'}
-                  {bill.patient.gender ? ` / ${bill.patient.gender}` : ''}
-                </div>
-              )}
-              <div>
-                <span className="font-bold">Category :</span>{' '}
-                {!bill.patient.hospitalPatientId
-                  ? 'Walk-in'
-                  : bill.patient.patientCategory === 'bpl'
-                  ? 'BPL'
-                  : 'Registered'}
-              </div>
-              {bill.doctor && (
-                <div><span className="font-bold">Doctor   :</span> {bill.doctor.name}</div>
-              )}
-            </div>
-          </div>
-
-          {/* Items Table — fixed layout so columns don't shift */}
-          <table className="w-full text-[10px] border-collapse mb-4" style={{ tableLayout: 'fixed' }}>
+          {/* ── 3. ITEMS TABLE ───────────────────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
             <colgroup>
-              <col style={{ width: '20px' }} />   {/* # */}
-              <col />                              {/* Drug — fills remaining space */}
-              <col style={{ width: '52px' }} />   {/* Batch */}
-              <col style={{ width: '36px' }} />   {/* Exp */}
-              <col style={{ width: '28px' }} />   {/* Qty */}
-              <col style={{ width: '54px' }} />   {/* MRP */}
-              <col style={{ width: '38px' }} />   {/* Disc% */}
-              <col style={{ width: '58px' }} />   {/* Net */}
+              <col style={{ width: '22px' }} />   {/* S.No */}
+              <col />                              {/* Description */}
+              <col style={{ width: '52px' }} />   {/* HSN/SAC */}
+              <col style={{ width: '44px' }} />   {/* Batch */}
+              <col style={{ width: '28px' }} />   {/* Exp */}
+              <col style={{ width: '24px' }} />   {/* Qty */}
+              <col style={{ width: '50px' }} />   {/* Rate */}
+              <col style={{ width: '50px' }} />   {/* MRP */}
+              <col style={{ width: '28px' }} />   {/* Dis */}
+              <col style={{ width: '34px' }} />   {/* GST% */}
+              <col style={{ width: '44px' }} />   {/* GST */}
+              <col style={{ width: '52px' }} />   {/* Total */}
             </colgroup>
             <thead>
-              <tr className="border-t-2 border-b-2 border-slate-700">
-                <th className="text-left py-1.5 pr-1 font-bold text-[9.5px]">#</th>
-                <th className="text-left py-1.5 pr-1 font-bold text-[9.5px]">Drug</th>
-                <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Batch</th>
-                <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Exp</th>
-                <th className="text-center py-1.5 px-1 font-bold text-[9.5px]">Qty</th>
-                <th className="text-right py-1.5 px-1 font-bold text-[9.5px]">Rate</th>
-                <th className="text-right py-1.5 px-1 font-bold text-[9.5px]">Disc%</th>
-                <th className="text-right py-1.5 pl-1 font-bold text-[9.5px]">Net</th>
+              <tr>
+                <TH center>S.No</TH>
+                <TH>Description &amp; Packing</TH>
+                <TH center>HSN /<br />SAC</TH>
+                <TH center>Batch<br />No.</TH>
+                <TH center>Exp</TH>
+                <TH center>Qty</TH>
+                <TH right>Rate</TH>
+                <TH right>MRP</TH>
+                <TH right>Dis</TH>
+                <TH center>GST%</TH>
+                <TH right>GST</TH>
+                <TH right>Total</TH>
               </tr>
             </thead>
             <tbody>
               {bill.items.map((item, idx) => (
-                <tr key={idx} className="border-b border-slate-200">
-                  <td className="py-1 pr-1 text-slate-500 align-top">{idx + 1}</td>
-                  <td className="py-1 pr-1 align-top leading-snug">
-                    <span className="font-medium">{item.drugName}</span>
+                <tr key={idx}>
+                  <TD center>{idx + 1}</TD>
+                  <TD>
+                    <span style={{ fontWeight: 600 }}>{item.drugName}</span>
                     {item.schedule && (
-                      <span className="ml-1 text-[8px] bg-slate-100 border border-slate-300 rounded px-0.5 text-slate-600 whitespace-nowrap align-middle">
-                        {scheduleLabels[item.schedule] ?? item.schedule.toUpperCase()}
+                      <span style={{
+                        marginLeft: '4px', fontSize: '7.5px',
+                        background: '#f1f5f9', border: '1px solid #cbd5e1',
+                        borderRadius: '2px', padding: '0 2px', color: '#475569',
+                      }}>
+                        {scheduleLabels[item.schedule.toLowerCase()] ?? item.schedule.toUpperCase()}
                       </span>
                     )}
-                  </td>
-                  <td className="py-1 px-1 text-center text-slate-600 whitespace-nowrap align-top">
-                    {item.batchNo}
-                  </td>
-                  <td className="py-1 px-1 text-center text-slate-600 whitespace-nowrap align-top">
-                    {item.expiryDate}
-                  </td>
-                  <td className="py-1 px-1 text-center align-top">{item.quantity}</td>
-                  <td className="py-1 px-1 text-right whitespace-nowrap align-top" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {inr(item.mrpPerUnit)}
-                  </td>
-                  <td className="py-1 px-1 text-right text-slate-600 whitespace-nowrap align-top">
+                  </TD>
+                  <TD center small>{item.hsnCode ?? '—'}</TD>
+                  <TD center small style={{ fontFamily: 'monospace' }}>{item.batchNo}</TD>
+                  <TD center small>{item.expiryDate}</TD>
+                  <TD center>{item.quantity}</TD>
+                  <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {item.taxableAmount != null && item.quantity > 0
+                      ? inr(item.taxableAmount / item.quantity)
+                      : inr(item.mrpPerUnit)}
+                  </TD>
+                  <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(item.mrpPerUnit)}</TD>
+                  <TD right>
                     {item.discountPct > 0 ? `${item.discountPct}%` : '—'}
-                  </td>
-                  <td className="py-1 pl-1 text-right font-medium whitespace-nowrap align-top" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {inr(item.netAmount)}
-                  </td>
+                  </TD>
+                  <TD center>
+                    {(item.gstRate ?? 0) > 0 ? `${item.gstRate}%` : '—'}
+                  </TD>
+                  <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {(item.gstAmount ?? 0) > 0 ? inr(item.gstAmount!) : '—'}
+                  </TD>
+                  <TD right bold style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(item.netAmount)}</TD>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Totals */}
-          <div className="flex justify-end mb-5">
-            <div className="w-52 text-[10.5px] space-y-1">
-              <div className="flex justify-between text-slate-600">
-                <span>Gross Amount</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.grossAmount)}</span>
-              </div>
-              {bill.totalDiscount > 0 && (
-                <div className="flex justify-between text-green-700">
-                  <span>Total Discount</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>− {inr(bill.totalDiscount)}</span>
-                </div>
-              )}
-              {bill.totalGst > 0 && (
-                <>
-                  <div className="flex justify-between text-slate-600">
-                    <span>CGST</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst / 2)}</span>
+          {/* ── 4. TOTALS ROW ────────────────────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+            <tbody>
+              <tr>
+                <TD style={{ width: '50px', backgroundColor: '#f8fafc' }} bold>
+                  ITEMS: {bill.items.length}
+                </TD>
+                <TD style={{ width: '50px', backgroundColor: '#f8fafc' }} bold>
+                  QTY: {totalQty}
+                </TD>
+                <TD bold style={{ backgroundColor: '#f8fafc' }}>
+                  BASE: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(baseAmount)}</span>
+                </TD>
+                <TD bold style={{ backgroundColor: '#f8fafc' }}>
+                  SGST: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(sgst)}</span>
+                </TD>
+                <TD bold style={{ backgroundColor: '#f8fafc' }}>
+                  CGST: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(cgst)}</span>
+                </TD>
+                <TD bold style={{ backgroundColor: '#f8fafc' }}>
+                  GST: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst)}</span>
+                </TD>
+                <TD bold right style={{ backgroundColor: '#f8fafc', fontVariantNumeric: 'tabular-nums', fontSize: '10.5px' }}>
+                  AMOUNT: {inr(bill.netPayable)}
+                </TD>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* ── 5. GST BREAKDOWN + PAYMENT ───────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+            <tbody>
+              <tr>
+                {/* GST category table */}
+                <td style={{ border: '1px solid #475569', padding: 0, width: '55%', verticalAlign: 'top' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <TH style={{ borderLeft: 'none', borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>Category</TH>
+                        <TH right style={{ borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>Base</TH>
+                        <TH right style={{ borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>GST</TH>
+                        <TH right style={{ borderRight: 'none', borderTop: 'none' }}>Amount</TH>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(gstGroups).map(([rate, vals]) => (
+                        <tr key={rate}>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px' }}>
+                            {rate === '0' ? 'Nil Rated' : `${rate}% GST`}
+                          </td>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            {inr(vals.base)}
+                          </td>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            {inr(vals.gst)}
+                          </td>
+                          <td style={{ padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            {inr(vals.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </td>
+                {/* Payment / net summary */}
+                <td style={{ border: '1px solid #475569', padding: '6px 10px', verticalAlign: 'top' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
+                    <span>Gross Amount</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.grossAmount)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-600">
+                  {bill.totalDiscount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#16a34a' }}>
+                      <span>Discount</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>− {inr(bill.totalDiscount)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
                     <span>SGST</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst / 2)}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(sgst)}</span>
                   </div>
-                </>
-              )}
-              <div className="flex justify-between font-bold text-[13px] border-t-2 border-slate-700 pt-1.5 mt-1">
-                <span>Net Payable</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.netPayable)}</span>
-              </div>
-            </div>
-          </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
+                    <span>CGST</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(cgst)}</span>
+                  </div>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    borderTop: '1.5px solid #334155', marginTop: '4px', paddingTop: '4px',
+                    fontSize: '11px', fontWeight: 800,
+                  }}>
+                    <span>Net Payable</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.netPayable)}</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Dashed separator */}
-          <div className="border-t border-dashed border-slate-400 my-3" />
+          {/* ── 6. AMOUNT IN WORDS ───────────────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+            <tbody>
+              <tr>
+                <TD bold style={{ fontSize: '9px', backgroundColor: '#f8fafc' }}>Amount in Words :</TD>
+                <TD style={{ fontSize: '9px' }}>{amountInWords(bill.netPayable)}</TD>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Footer */}
-          <div className="text-center text-[9.5px] text-slate-500 space-y-0.5">
-            <p className="font-bold text-slate-700">
-              Thank you for choosing HCEH Eye Hospital
-            </p>
-            <p>This is a computer generated bill. No signature required.</p>
-            <p className="text-[8.5px] text-slate-500 mt-1 leading-snug italic">
-              Medicines once sold will not be taken back or exchanged without a valid receipt
-              and original packaging. Refrigerated items cannot be returned.
-            </p>
-          </div>
+          {/* ── 7. FOOTER ────────────────────────────────────────────────── */}
+          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+            <tbody>
+              <tr>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '40%', fontSize: '8.5px', color: '#64748b' }}>
+                  Remarks: &nbsp;
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', fontSize: '8px', color: '#64748b', verticalAlign: 'top' }}>
+                  E &amp; O.E
+                  <br />
+                  <em>Medicines once sold will not be taken back or exchanged without a valid receipt and original packaging. Refrigerated items cannot be returned.</em>
+                </td>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '9px', fontWeight: 700, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                  NO RETURN &amp; EXCHANGE
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={3} style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '8.5px', color: '#64748b' }}>
+                  This is a computer generated bill. No signature required. &nbsp;|&nbsp; Thank you for choosing {name}.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </>
     )
