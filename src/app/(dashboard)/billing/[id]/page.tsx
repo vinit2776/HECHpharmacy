@@ -355,7 +355,6 @@ export default function BillDetailPage() {
                 <th className="px-2 py-2 text-center">Exp</th>
                 <th className="px-2 py-2 text-right">Qty</th>
                 <th className="px-2 py-2 text-right">Rate</th>
-                <th className="px-2 py-2 text-right">MRP</th>
                 <th className="px-2 py-2 text-center">Dis%</th>
                 <th className="px-2 py-2 text-center">GST%</th>
                 <th className="px-2 py-2 text-right">GST</th>
@@ -382,9 +381,6 @@ export default function BillDetailPage() {
                     {item.expiryDate ? format(new Date(item.expiryDate), 'MM/yy') : '—'}
                   </td>
                   <td className="px-2 py-2 text-right">{item.quantity}</td>
-                  <td className="px-2 py-2 text-right text-slate-700">
-                    {INR(item.taxableAmount > 0 ? item.taxableAmount / item.quantity : item.mrpPerUnit)}
-                  </td>
                   <td className="px-2 py-2 text-right font-medium">{INR(item.mrpPerUnit)}</td>
                   <td className="px-2 py-2 text-center text-green-700">
                     {item.discountPct > 0 ? `${item.discountPct}%` : '—'}
