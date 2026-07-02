@@ -343,63 +343,115 @@ export default function BillDetailPage() {
           </Card>
         </div>
 
-        {/* Items table */}
-        <div className="border rounded-lg overflow-hidden mb-6">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead>#</TableHead>
-                <TableHead>Drug</TableHead>
-                <TableHead>Batch / Expiry</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Rate/unit</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">CGST</TableHead>
-                <TableHead className="text-right">SGST</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {/* Items table — Tax Invoice format */}
+        <div className="border rounded-lg overflow-x-auto mb-4">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-700 text-white text-xs">
+                <th className="px-2 py-2 text-left w-8">#</th>
+                <th className="px-2 py-2 text-left">Description &amp; Packing</th>
+                <th className="px-2 py-2 text-center">HSN/<br/>SAC</th>
+                <th className="px-2 py-2 text-center">Batch</th>
+                <th className="px-2 py-2 text-center">Exp</th>
+                <th className="px-2 py-2 text-right">Qty</th>
+                <th className="px-2 py-2 text-right">Rate</th>
+                <th className="px-2 py-2 text-right">MRP</th>
+                <th className="px-2 py-2 text-center">Dis%</th>
+                <th className="px-2 py-2 text-center">GST%</th>
+                <th className="px-2 py-2 text-right">GST</th>
+                <th className="px-2 py-2 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
               {bill.items.map((item, idx) => (
-                <TableRow key={item.id}>
-                  <TableCell className="text-slate-400 text-xs">{idx + 1}</TableCell>
-                  <TableCell>
+                <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                  <td className="px-2 py-2 text-slate-400 text-xs">{idx + 1}</td>
+                  <td className="px-2 py-2">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-slate-900">{item.drugName}</span>
                       <ScheduleBadge schedule={item.schedule} />
                     </div>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">
-                    <span className="font-mono">{item.batchNo}</span>
-                    {item.expiryDate && (
-                      <span className="ml-1">
-                        (Exp: {format(new Date(item.expiryDate), 'MMM yyyy')})
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">{INR(item.mrpPerUnit)}</TableCell>
-                  <TableCell className="text-right text-green-700">
+                  </td>
+                  <td className="px-2 py-2 text-center text-xs text-slate-500 font-mono">
+                    {item.hsnCode || '—'}
+                  </td>
+                  <td className="px-2 py-2 text-center text-xs font-mono text-slate-600">
+                    {item.batchNo}
+                  </td>
+                  <td className="px-2 py-2 text-center text-xs text-slate-500">
+                    {item.expiryDate ? format(new Date(item.expiryDate), 'MM/yy') : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right">{item.quantity}</td>
+                  <td className="px-2 py-2 text-right text-slate-700">
+                    {INR(item.taxableAmount > 0 ? item.taxableAmount / item.quantity : item.mrpPerUnit)}
+                  </td>
+                  <td className="px-2 py-2 text-right font-medium">{INR(item.mrpPerUnit)}</td>
+                  <td className="px-2 py-2 text-center text-green-700">
                     {item.discountPct > 0 ? `${item.discountPct}%` : '—'}
-                  </TableCell>
-                  <TableCell className="text-right text-slate-500">
-                    {item.gstRate > 0 ? `${item.gstRate / 2}% (${INR(item.gstAmount / 2)})` : '—'}
-                  </TableCell>
-                  <TableCell className="text-right text-slate-500">
-                    {item.gstRate > 0 ? `${item.gstRate / 2}% (${INR(item.gstAmount / 2)})` : '—'}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">{INR(item.netAmount)}</TableCell>
-                </TableRow>
+                  </td>
+                  <td className="px-2 py-2 text-center text-slate-500">
+                    {item.gstRate > 0 ? `${item.gstRate}%` : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right text-slate-500">
+                    {item.gstRate > 0 ? INR(item.gstAmount) : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right font-semibold">{INR(item.netAmount)}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
 
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
+        {/* Summary bar */}
+        <div className="flex flex-wrap gap-4 bg-slate-100 border rounded px-4 py-2 text-xs text-slate-600 mb-4 font-medium">
+          <span>ITEMS: <span className="text-slate-900">{bill.items.length}</span></span>
+          <span>QTY: <span className="text-slate-900">{bill.items.reduce((s, i) => s + i.quantity, 0)}</span></span>
+          <span>BASE: <span className="text-slate-900">{INR(bill.subtotalMrp - bill.totalDiscount - bill.totalGst)}</span></span>
+          <span>SGST: <span className="text-slate-900">{INR(bill.totalGst / 2)}</span></span>
+          <span>CGST: <span className="text-slate-900">{INR(bill.totalGst / 2)}</span></span>
+          <span>GST: <span className="text-slate-900">{INR(bill.totalGst)}</span></span>
+          <span className="ml-auto font-bold text-slate-900">AMOUNT: {INR(bill.totalAmount)}</span>
+        </div>
+
+        {/* GST category breakdown + Net Payable */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* GST breakdown table */}
+          <div className="flex-1 border rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-600">
+                  <th className="px-3 py-2 text-left">Category</th>
+                  <th className="px-3 py-2 text-right">Base</th>
+                  <th className="px-3 py-2 text-right">GST</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(
+                  bill.items.reduce<Record<string, { base: number; gst: number; amount: number }>>((acc, item) => {
+                    const key = `${item.gstRate}% GST`
+                    if (!acc[key]) acc[key] = { base: 0, gst: 0, amount: 0 }
+                    acc[key].base += item.taxableAmount
+                    acc[key].gst += item.gstAmount
+                    acc[key].amount += item.netAmount
+                    return acc
+                  }, {})
+                ).map(([label, vals]) => (
+                  <tr key={label} className="border-t">
+                    <td className="px-3 py-1.5 text-slate-600">{label}</td>
+                    <td className="px-3 py-1.5 text-right">{INR(vals.base)}</td>
+                    <td className="px-3 py-1.5 text-right">{INR(vals.gst)}</td>
+                    <td className="px-3 py-1.5 text-right font-medium">{INR(vals.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
           <div className="bg-slate-50 border rounded-lg px-4 py-3 text-sm space-y-1 min-w-[240px]">
             <div className="flex justify-between text-slate-500">
-              <span>Subtotal (MRP)</span>
+              <span>Gross Amount</span>
               <span>{INR(bill.subtotalMrp)}</span>
             </div>
             <div className="flex justify-between text-green-700">
@@ -407,11 +459,11 @@ export default function BillDetailPage() {
               <span>− {INR(bill.totalDiscount)}</span>
             </div>
             <div className="flex justify-between text-slate-500">
-              <span>Total CGST</span>
+              <span>SGST</span>
               <span>{INR(bill.totalGst / 2)}</span>
             </div>
             <div className="flex justify-between text-slate-500">
-              <span>Total SGST</span>
+              <span>CGST</span>
               <span>{INR(bill.totalGst / 2)}</span>
             </div>
             <Separator className="my-1" />
