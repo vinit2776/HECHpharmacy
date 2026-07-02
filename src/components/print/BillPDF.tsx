@@ -329,8 +329,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               <col style={{ width: '44px' }} />   {/* Batch */}
               <col style={{ width: '28px' }} />   {/* Exp */}
               <col style={{ width: '24px' }} />   {/* Qty */}
-              <col style={{ width: '50px' }} />   {/* Rate */}
-              <col style={{ width: '50px' }} />   {/* MRP */}
+              <col style={{ width: '56px' }} />   {/* Rate (MRP) */}
               <col style={{ width: '28px' }} />   {/* Dis */}
               <col style={{ width: '34px' }} />   {/* GST% */}
               <col style={{ width: '44px' }} />   {/* GST */}
@@ -345,7 +344,6 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 <TH center>Exp</TH>
                 <TH center>Qty</TH>
                 <TH right>Rate</TH>
-                <TH right>MRP</TH>
                 <TH right>Dis</TH>
                 <TH center>GST%</TH>
                 <TH right>GST</TH>
@@ -372,11 +370,6 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                   <TD center small style={{ fontFamily: 'monospace' }}>{item.batchNo}</TD>
                   <TD center small>{item.expiryDate}</TD>
                   <TD center>{item.quantity}</TD>
-                  <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {item.taxableAmount != null && item.quantity > 0
-                      ? inr(item.taxableAmount / item.quantity)
-                      : inr(item.mrpPerUnit)}
-                  </TD>
                   <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(item.mrpPerUnit)}</TD>
                   <TD right>
                     {item.discountPct > 0 ? `${item.discountPct}%` : '—'}
@@ -394,7 +387,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
           </table>
 
           {/* ── 4. TOTALS ROW ────────────────────────────────────────────── */}
-          <table style={{ ...tableStyle, marginTop: '-1px' }}>
+          <table style={{ ...tableStyle, marginTop: '6px' }}>
             <tbody>
               <tr>
                 <TD style={{ width: '50px', backgroundColor: '#f8fafc' }} bold>
@@ -422,42 +415,13 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
             </tbody>
           </table>
 
-          {/* ── 5. GST BREAKDOWN + PAYMENT ───────────────────────────────── */}
+          {/* ── 5. PAYMENT SUMMARY ───────────────────────────────────────── */}
           <table style={{ ...tableStyle, marginTop: '-1px' }}>
             <tbody>
               <tr>
-                {/* GST category table */}
-                <td style={{ border: '1px solid #475569', padding: 0, width: '55%', verticalAlign: 'top' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <TH style={{ borderLeft: 'none', borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>Category</TH>
-                        <TH right style={{ borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>Base</TH>
-                        <TH right style={{ borderRight: '1px solid #cbd5e1', borderTop: 'none' }}>GST</TH>
-                        <TH right style={{ borderRight: 'none', borderTop: 'none' }}>Amount</TH>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(gstGroups).map(([rate, vals]) => (
-                        <tr key={rate}>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px' }}>
-                            {rate === '0' ? 'Nil Rated' : `${rate}% GST`}
-                          </td>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {inr(vals.base)}
-                          </td>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {inr(vals.gst)}
-                          </td>
-                          <td style={{ padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {inr(vals.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <td style={{ border: '1px solid #475569', padding: '6px 10px', width: '55%', verticalAlign: 'top', fontSize: '10.5px', color: '#475569' }}>
+                  {/* empty left cell for alignment */}
                 </td>
-                {/* Payment / net summary */}
                 <td style={{ border: '1px solid #475569', padding: '6px 10px', verticalAlign: 'top' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10.5px', color: '#475569' }}>
                     <span>Gross Amount</span>
@@ -507,13 +471,10 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '40%', fontSize: '10px', color: '#64748b' }}>
                   Remarks: &nbsp;
                 </td>
-                <td style={{ border: '1px solid #475569', padding: '4px 8px', fontSize: '10px', color: '#64748b', verticalAlign: 'top' }}>
+                <td colSpan={2} style={{ border: '1px solid #475569', padding: '4px 8px', fontSize: '10px', color: '#64748b', verticalAlign: 'top' }}>
                   E &amp; O.E
                   <br />
                   <em>Medicines once sold will not be taken back or exchanged without a valid receipt and original packaging. Refrigerated items cannot be returned.</em>
-                </td>
-                <td style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '11px', fontWeight: 700, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                  NO RETURN &amp; EXCHANGE
                 </td>
               </tr>
               <tr>
