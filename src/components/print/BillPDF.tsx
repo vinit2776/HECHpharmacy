@@ -109,7 +109,7 @@ const TD = ({
     style={{
       border: '1px solid #475569',
       padding: '3px 5px',
-      fontSize: small ? '8px' : '9.5px',
+      fontSize: small ? '10px' : '11px',
       fontWeight: bold ? 700 : 400,
       textAlign: right ? 'right' : center ? 'center' : 'left',
       verticalAlign: 'top',
@@ -131,7 +131,7 @@ const TH = ({
     style={{
       border: '1px solid #475569',
       padding: '4px 5px',
-      fontSize: '9px',
+      fontSize: '10.5px',
       fontWeight: 700,
       textAlign: right ? 'right' : center ? 'center' : 'left',
       verticalAlign: 'middle',
@@ -209,7 +209,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
 
         <div
           ref={ref}
-          className={`bill-print-root bg-white text-slate-900 font-sans text-[9.5px] leading-snug w-[190mm] mx-auto ${className ?? ''}`}
+          className={`bill-print-root bg-white text-slate-900 font-sans text-[11px] leading-snug w-[190mm] mx-auto ${className ?? ''}`}
         >
           {/* ── 1. HOSPITAL HEADER ───────────────────────────────────────── */}
           <table style={tableStyle}>
@@ -220,17 +220,17 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                   border: '1px solid #475569', padding: '6px 10px',
                   width: '65%', verticalAlign: 'top',
                 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 800, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                  <p style={{ fontSize: '17px', fontWeight: 800, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
                     {name}
                   </p>
                   {address && (
-                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>{address}</p>
+                    <p style={{ fontSize: '10px', textAlign: 'center', color: '#475569' }}>{address}</p>
                   )}
                   {pharmPhone && (
-                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>Ph: {pharmPhone}</p>
+                    <p style={{ fontSize: '10px', textAlign: 'center', color: '#475569' }}>Ph: {pharmPhone}</p>
                   )}
                   {dlNo && (
-                    <p style={{ fontSize: '8.5px', textAlign: 'center', color: '#475569' }}>DL No: {dlNo}</p>
+                    <p style={{ fontSize: '10px', textAlign: 'center', color: '#475569' }}>DL No: {dlNo}</p>
                   )}
                 </td>
                 {/* Right: state + GSTIN */}
@@ -239,13 +239,13 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                   verticalAlign: 'top', textAlign: 'right',
                 }}>
                   {stateCode && (
-                    <p style={{ fontSize: '9px', marginBottom: '2px' }}>State Code : <strong>{stateCode}</strong></p>
+                    <p style={{ fontSize: '10.5px', marginBottom: '2px' }}>State Code : <strong>{stateCode}</strong></p>
                   )}
                   {stateName && (
-                    <p style={{ fontSize: '9px', marginBottom: '2px' }}>State Name : <strong>{stateName}</strong></p>
+                    <p style={{ fontSize: '10.5px', marginBottom: '2px' }}>State Name : <strong>{stateName}</strong></p>
                   )}
                   {gstin && (
-                    <p style={{ fontSize: '9px', fontWeight: 700 }}>GSTIN : {gstin}</p>
+                    <p style={{ fontSize: '10.5px', fontWeight: 700 }}>GSTIN : {gstin}</p>
                   )}
                 </td>
               </tr>
@@ -258,46 +258,46 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               {/* Row 1: patient "To", bill number, date, Tax Invoice label */}
               <tr>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '30%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>To</p>
-                  <p style={{ fontSize: '10px', fontWeight: 700 }}>{bill.patient.name}</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>To</p>
+                  <p style={{ fontSize: '12px', fontWeight: 700 }}>{bill.patient.name}</p>
                   {bill.patient.hospitalPatientId && (
-                    <p style={{ fontSize: '8px', color: '#64748b', fontFamily: 'monospace' }}>
+                    <p style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace' }}>
                       UHID: {bill.patient.hospitalPatientId}
                     </p>
                   )}
                   {bill.patient.phone && (
-                    <p style={{ fontSize: '8px', color: '#64748b' }}>Ph: {bill.patient.phone}</p>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>Ph: {bill.patient.phone}</p>
                   )}
                   {(bill.patient.age != null || bill.patient.gender) && (
-                    <p style={{ fontSize: '8px', color: '#64748b' }}>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>
                       {bill.patient.age != null ? `${bill.patient.age} yrs` : ''}
                       {bill.patient.age != null && bill.patient.gender ? ' / ' : ''}
                       {bill.patient.gender ?? ''}
                     </p>
                   )}
-                  <p style={{ fontSize: '8px', color: '#64748b' }}>Category: {category}</p>
+                  <p style={{ fontSize: '10px', color: '#64748b' }}>Category: {category}</p>
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Terms</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Terms</p>
                   <p style={{ fontWeight: 700 }}>C-CASH BILL</p>
                   {bill.prescriptionNo && (
-                    <p style={{ fontSize: '8px', color: '#64748b' }}>Rx No: {bill.prescriptionNo}</p>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>Rx No: {bill.prescriptionNo}</p>
                   )}
                   {bill.doctor && (
-                    <p style={{ fontSize: '8px', color: '#64748b' }}>Dr. {bill.doctor.name}</p>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>Dr. {bill.doctor.name}</p>
                   )}
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Bill No &amp; Page No</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Bill No &amp; Page No</p>
                   <p style={{ fontWeight: 700, fontFamily: 'monospace' }}>{bill.billNumber} &nbsp; 1/1</p>
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '15%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Bill Date</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Bill Date</p>
                   <p style={{ fontWeight: 700 }}>{billDate}</p>
-                  <p style={{ fontSize: '8px', color: '#64748b' }}>{billTime}</p>
+                  <p style={{ fontSize: '10px', color: '#64748b' }}>{billTime}</p>
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '15%', verticalAlign: 'middle', textAlign: 'center' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                     {gstin ? 'Tax Invoice' : 'Cash Bill'}
                   </p>
                 </td>
@@ -305,15 +305,15 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               {/* Row 2: salesman */}
               <tr>
                 <td style={{ border: '1px solid #475569', padding: '3px 8px' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Payment Mode</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Payment Mode</p>
                   <p style={{ fontWeight: 600, textTransform: 'capitalize' }}>{bill.paymentMode}</p>
                 </td>
                 <td colSpan={2} style={{ border: '1px solid #475569', padding: '3px 8px' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Salesman Name</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Salesman Name</p>
                   <p style={{ fontWeight: 600 }}>{bill.servedBy ?? '—'}</p>
                 </td>
                 <td colSpan={2} style={{ border: '1px solid #475569', padding: '3px 8px' }}>
-                  <p style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>Delivery Type</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Delivery Type</p>
                   <p style={{ fontWeight: 600 }}>Counter</p>
                 </td>
               </tr>
@@ -360,7 +360,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                     <span style={{ fontWeight: 600 }}>{item.drugName}</span>
                     {item.schedule && (
                       <span style={{
-                        marginLeft: '4px', fontSize: '7.5px',
+                        marginLeft: '4px', fontSize: '9px',
                         background: '#f1f5f9', border: '1px solid #cbd5e1',
                         borderRadius: '2px', padding: '0 2px', color: '#475569',
                       }}>
@@ -415,7 +415,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 <TD bold style={{ backgroundColor: '#f8fafc' }}>
                   GST: <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.totalGst)}</span>
                 </TD>
-                <TD bold right style={{ backgroundColor: '#f8fafc', fontVariantNumeric: 'tabular-nums', fontSize: '10.5px' }}>
+                <TD bold right style={{ backgroundColor: '#f8fafc', fontVariantNumeric: 'tabular-nums', fontSize: '12px' }}>
                   AMOUNT: {inr(bill.netPayable)}
                 </TD>
               </tr>
@@ -440,16 +440,16 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                     <tbody>
                       {Object.entries(gstGroups).map(([rate, vals]) => (
                         <tr key={rate}>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px' }}>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px' }}>
                             {rate === '0' ? 'Nil Rated' : `${rate}% GST`}
                           </td>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                             {inr(vals.base)}
                           </td>
-                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                          <td style={{ borderRight: '1px solid #cbd5e1', padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                             {inr(vals.gst)}
                           </td>
-                          <td style={{ padding: '3px 5px', fontSize: '9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                          <td style={{ padding: '3px 5px', fontSize: '10.5px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                             {inr(vals.amount)}
                           </td>
                         </tr>
@@ -459,28 +459,28 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                 </td>
                 {/* Payment / net summary */}
                 <td style={{ border: '1px solid #475569', padding: '6px 10px', verticalAlign: 'top' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10.5px', color: '#475569' }}>
                     <span>Gross Amount</span>
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.grossAmount)}</span>
                   </div>
                   {bill.totalDiscount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#16a34a' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10.5px', color: '#16a34a' }}>
                       <span>Discount</span>
                       <span style={{ fontVariantNumeric: 'tabular-nums' }}>− {inr(bill.totalDiscount)}</span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10.5px', color: '#475569' }}>
                     <span>SGST</span>
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(sgst)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9px', color: '#475569' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10.5px', color: '#475569' }}>
                     <span>CGST</span>
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(cgst)}</span>
                   </div>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',
                     borderTop: '1.5px solid #334155', marginTop: '4px', paddingTop: '4px',
-                    fontSize: '11px', fontWeight: 800,
+                    fontSize: '14px', fontWeight: 800,
                   }}>
                     <span>Net Payable</span>
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(bill.netPayable)}</span>
@@ -494,8 +494,8 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
           <table style={{ ...tableStyle, marginTop: '-1px' }}>
             <tbody>
               <tr>
-                <TD bold style={{ fontSize: '9px', backgroundColor: '#f8fafc' }}>Amount in Words :</TD>
-                <TD style={{ fontSize: '9px' }}>{amountInWords(bill.netPayable)}</TD>
+                <TD bold style={{ fontSize: '10.5px', backgroundColor: '#f8fafc' }}>Amount in Words :</TD>
+                <TD style={{ fontSize: '10.5px' }}>{amountInWords(bill.netPayable)}</TD>
               </tr>
             </tbody>
           </table>
@@ -504,20 +504,20 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
           <table style={{ ...tableStyle, marginTop: '-1px' }}>
             <tbody>
               <tr>
-                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '40%', fontSize: '8.5px', color: '#64748b' }}>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '40%', fontSize: '10px', color: '#64748b' }}>
                   Remarks: &nbsp;
                 </td>
-                <td style={{ border: '1px solid #475569', padding: '4px 8px', fontSize: '8px', color: '#64748b', verticalAlign: 'top' }}>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', fontSize: '10px', color: '#64748b', verticalAlign: 'top' }}>
                   E &amp; O.E
                   <br />
                   <em>Medicines once sold will not be taken back or exchanged without a valid receipt and original packaging. Refrigerated items cannot be returned.</em>
                 </td>
-                <td style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '9px', fontWeight: 700, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                <td style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '11px', fontWeight: 700, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                   NO RETURN &amp; EXCHANGE
                 </td>
               </tr>
               <tr>
-                <td colSpan={3} style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '8.5px', color: '#64748b' }}>
+                <td colSpan={3} style={{ border: '1px solid #475569', padding: '4px 8px', textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
                   This is a computer generated bill. No signature required. &nbsp;|&nbsp; Thank you for choosing {name}.
                 </td>
               </tr>
