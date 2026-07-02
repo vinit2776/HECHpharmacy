@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, ALL_ROLES, MANAGER_ROLES } from '@/lib/auth-utils'
+import { requireRole, ALL_ROLES, MANAGER_ROLES, apiError} from '@/lib/auth-utils'
 import { drugSchema } from '@/lib/validations/drug'
 
 export async function GET(req: Request) {
@@ -40,9 +40,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(drugs)
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -98,8 +96,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(drug, { status: 201 })
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { requireRole, SUPER_ADMIN_ROLES } from '@/lib/auth-utils'
+import { requireRole, SUPER_ADMIN_ROLES, apiError} from '@/lib/auth-utils'
 
 export async function GET() {
   try {
@@ -21,9 +21,7 @@ export async function GET() {
 
     return NextResponse.json(users)
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -70,8 +68,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(user, { status: 201 })
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }

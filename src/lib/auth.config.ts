@@ -5,7 +5,7 @@ import type { NextAuthConfig } from 'next-auth'
 // the Credentials provider with DB access for Node.js runtimes.
 export const authConfig = {
   pages: { signIn: '/login' },
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 8 * 60 * 60 },
   trustHost: true,
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

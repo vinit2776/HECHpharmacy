@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, PURCHASE_ROLES } from '@/lib/auth-utils'
+import { requireRole, PURCHASE_ROLES, apiError} from '@/lib/auth-utils'
 import { z } from 'zod'
 
 const supplierSchema = z.object({
@@ -40,9 +40,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(suppliers)
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -73,8 +71,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(supplier, { status: 201 })
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireRole, MANAGER_ROLES } from '@/lib/auth-utils'
+import { requireRole, MANAGER_ROLES, apiError } from '@/lib/auth-utils'
 import { enqueueReport } from '@/lib/reports/engine'
+import { REPORT_REGISTRY } from '@/lib/reports/registry'
 
 export async function GET(req: Request) {
   try {
@@ -26,9 +27,7 @@ export async function GET(req: Request) {
       reports.map((r) => ({ ...r, name: r.reportName }))
     )
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -38,12 +37,18 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { reportDefId, params, format } = body
 
+    const def = REPORT_REGISTRY.find((d) => d.id === reportDefId)
+    if (!def) {
+      return NextResponse.json({ error: 'Unknown report type' }, { status: 422 })
+    }
+    if (!def.formats.includes(format)) {
+      return NextResponse.json({ error: `Format must be one of: ${def.formats.join(', ')}` }, { status: 422 })
+    }
+
     const reportId = await enqueueReport(reportDefId, params, format, session.user.id)
 
     return NextResponse.json({ id: reportId, status: 'queued' }, { status: 201 })
   } catch (e: any) {
-    if (e.message === 'Unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (e.message === 'Forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
