@@ -41,8 +41,10 @@ export function calculateLine(input: DiscountInput): LineCalculation {
 
   const mrp = round(input.mrpPerUnit * input.quantity)
   const disc = round(mrp * pct / 100)
-  const taxable = round(mrp - disc)
-  const gst = round(taxable * input.gstRate / 100)
+  // MRP is GST-inclusive: back-calculate base and GST from the MRP after discount
+  const lineAfterDisc = round(mrp - disc)
+  const taxable = round(lineAfterDisc / (1 + input.gstRate / 100))
+  const gst = round(lineAfterDisc - taxable)
 
   return {
     discountPctApplied: pct,
@@ -50,7 +52,7 @@ export function calculateLine(input: DiscountInput): LineCalculation {
     discountAmount: disc,
     taxableAmount: taxable,
     gstAmount: gst,
-    lineNetAmount: round(taxable + gst),
+    lineNetAmount: lineAfterDisc,  // patient pays MRP minus any discount
     discountLabel,
   }
 }
