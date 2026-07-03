@@ -146,11 +146,24 @@ model User {
   @@map("users")
 }
 
+model Manufacturer {
+  id        String   @id @default(uuid())
+  code      String   @unique @db.VarChar(10)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  drugs     Drug[]
+
+  @@map("manufacturers")
+}
+
 model Drug {
   id                String         @id @default(uuid())
   name              String
   brandName         String?        @map("brand_name")
   manufacturer      String?
+  manufacturerId    String?        @map("manufacturer_id")
+  manufacturerRef   Manufacturer?  @relation(fields: [manufacturerId], references: [id])
   category          String
   dosageForm        DrugDosageForm @map("dosage_form")
   strength          String?

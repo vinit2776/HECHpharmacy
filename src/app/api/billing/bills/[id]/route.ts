@@ -18,7 +18,11 @@ export async function GET(
         cancelledByUser: { select: { name: true } },
         items: {
           include: {
-            drug: true,
+            drug: {
+              include: {
+                manufacturerRef: { select: { code: true } },
+              },
+            },
             batch: true,
           },
         },
@@ -60,6 +64,7 @@ export async function GET(
           gstAmount: Number(item.gstAmount),
           lineNetAmount: lineNetNum,
           netAmount: lineNetNum,
+          manufacturerCode: item.drug?.manufacturerRef?.code ?? null,
         }
       }),
     })

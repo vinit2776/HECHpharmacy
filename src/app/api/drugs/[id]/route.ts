@@ -11,6 +11,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       where: { id: params.id },
       include: {
         discountConfig: true,
+        manufacturerRef: { select: { id: true, code: true, name: true } },
         _count: {
           select: { inventoryBatches: true },
         },
@@ -49,6 +50,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         ...(data.name !== undefined && { name: data.name }),
         ...(data.brandName !== undefined && { brandName: data.brandName }),
         ...(data.manufacturer !== undefined && { manufacturer: data.manufacturer }),
+        ...(data.manufacturerId !== undefined && { manufacturerId: data.manufacturerId }),
         ...(data.category !== undefined && { category: data.category }),
         ...(data.dosageForm !== undefined && { dosageForm: data.dosageForm }),
         ...(data.strength !== undefined && { strength: data.strength }),
@@ -64,7 +66,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         ...(data.barcode !== undefined && { barcode: data.barcode }),
         ...(data.notes !== undefined && { notes: data.notes }),
       },
-      include: { discountConfig: true },
+      include: {
+        discountConfig: true,
+        manufacturerRef: { select: { id: true, code: true, name: true } },
+      },
     })
 
     return NextResponse.json(updated)

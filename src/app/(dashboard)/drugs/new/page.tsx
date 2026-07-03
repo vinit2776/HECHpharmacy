@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
+interface ManufacturerOption {
+  id: string
+  code: string
+  name: string
+}
 
 const DOSAGE_FORMS = [
   { value: 'eye_drop',     label: 'Eye Drop' },
@@ -48,7 +54,7 @@ const GST_RATES = [0, 5, 12, 18, 28]
 interface FormState {
   name: string
   brandName: string
-  manufacturer: string
+  manufacturerId: string
   category: string
   dosageForm: string
   strength: string
@@ -68,7 +74,7 @@ interface FormState {
 const EMPTY: FormState = {
   name: '',
   brandName: '',
-  manufacturer: '',
+  manufacturerId: '',
   category: '',
   dosageForm: 'eye_drop',
   strength: '',
@@ -102,6 +108,14 @@ export default function NewDrugPage() {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([])
+
+  useEffect(() => {
+    fetch('/api/manufacturers')
+      .then((r) => r.json())
+      .then(setManufacturers)
+      .catch(() => {})
+  }, [])
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -114,7 +128,7 @@ export default function NewDrugPage() {
     const payload: Record<string, any> = {
       name:             form.name.trim(),
       brandName:        form.brandName.trim() || undefined,
-      manufacturer:     form.manufacturer.trim() || undefined,
+      manufacturerId:   form.manufacturerId || undefined,
       category:         form.category.trim(),
       dosageForm:       form.dosageForm,
       strength:         form.strength.trim() || undefined,
@@ -195,11 +209,27 @@ export default function NewDrugPage() {
               />
             </Field>
             <Field label="Manufacturer">
-              <Input
-                value={form.manufacturer}
-                onChange={set('manufacturer')}
-                placeholder="e.g. Cipla"
-              />
+              <Select
+                value={form.manufacturerId}
+                onValueChange={(v) => setForm((f) => ({ ...f, manufacturerId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select manufacturer…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {manufacturers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.code} — {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">
+                Manage manufacturers at{' '}
+                <a href="/drugs/manufacturers" className="text-blue-600 hover:underline">
+                  Drugs → Manufacturers
+                </a>
+              </p>
             </Field>
             <Field label="Category" required>
               <Input
