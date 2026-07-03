@@ -234,11 +234,12 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                     <p style={{ fontSize: '10px', textAlign: 'center', color: '#475569' }}>DL No: {dlNo}</p>
                   )}
                 </td>
-                {/* Right: state + GSTIN */}
+                {/* Right: state + GSTIN + Cash Bill */}
                 <td style={{
                   border: '1px solid #475569', padding: '6px 10px',
                   verticalAlign: 'top', textAlign: 'right',
                 }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>C-CASH BILL</p>
                   {stateCode && (
                     <p style={{ fontSize: '10.5px', marginBottom: '2px' }}>State Code : <strong>{stateCode}</strong></p>
                   )}
@@ -259,7 +260,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               {/* Row 1: patient "To", bill number, date, Tax Invoice label */}
               <tr>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '30%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>To</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Patient Name</p>
                   <p style={{ fontSize: '12px', fontWeight: 700 }}>{bill.patient.name}</p>
                   {bill.patient.hospitalPatientId && (
                     <p style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace' }}>
@@ -279,13 +280,10 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                   <p style={{ fontSize: '10px', color: '#64748b' }}>Category: {category}</p>
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
-                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Terms</p>
-                  <p style={{ fontWeight: 700 }}>C-CASH BILL</p>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '1px' }}>Doctor Name</p>
+                  <p style={{ fontWeight: 700 }}>{bill.doctor ? `Dr. ${bill.doctor.name}` : '—'}</p>
                   {bill.prescriptionNo && (
                     <p style={{ fontSize: '10px', color: '#64748b' }}>Rx No: {bill.prescriptionNo}</p>
-                  )}
-                  {bill.doctor && (
-                    <p style={{ fontSize: '10px', color: '#64748b' }}>Dr. {bill.doctor.name}</p>
                   )}
                 </td>
                 <td style={{ border: '1px solid #475569', padding: '4px 8px', width: '20%', verticalAlign: 'top' }}>
