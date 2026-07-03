@@ -143,12 +143,12 @@ function ManufacturerEdit({ drug, onSaved }: { drug: Drug; onSaved: (updated: Dr
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <Select value={selectedId} onValueChange={setSelectedId}>
+      <Select value={selectedId || '__none__'} onValueChange={(v) => setSelectedId(v === '__none__' ? '' : v)}>
         <SelectTrigger className="w-64 h-8 text-sm">
           <SelectValue placeholder="Select manufacturer…" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">— None —</SelectItem>
+          <SelectItem value="__none__">— None —</SelectItem>
           {manufacturers.map(m => (
             <SelectItem key={m.id} value={m.id}>{m.code} — {m.name}</SelectItem>
           ))}
