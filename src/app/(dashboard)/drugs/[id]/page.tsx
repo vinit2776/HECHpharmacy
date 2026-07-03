@@ -28,6 +28,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { toast } from 'sonner'
+
+interface ManufacturerOption {
+  id: string
+  code: string
+  name: string
+}
 
 interface DrugDiscountConfig {
   id: string
@@ -41,6 +48,8 @@ interface Drug {
   name: string
   brandName: string | null
   manufacturer: string | null
+  manufacturerId: string | null
+  manufacturerRef: { id: string; code: string; name: string } | null
   category: string
   dosageForm: string
   strength: string | null
@@ -83,7 +92,82 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function DetailsTab({ drug }: { drug: Drug }) {
+function ManufacturerEdit({ drug, onSaved }: { drug: Drug; onSaved: (updated: Drug) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [manufacturers, setManufacturers] = useState<ManufacturerOption[]>([])
+  const [selectedId, setSelectedId] = useState(drug.manufacturerId ?? '')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (editing && manufacturers.length === 0) {
+      fetch('/api/manufacturers').then(r => r.json()).then(setManufacturers).catch(() => {})
+    }
+  }, [editing, manufacturers.length])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/drugs/${drug.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manufacturerId: selectedId || null }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      const updated = await res.json()
+      onSaved(updated)
+      setEditing(false)
+      toast.success('Manufacturer updated')
+    } catch {
+      toast.error('Failed to update manufacturer')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    const display = drug.manufacturerRef
+      ? `${drug.manufacturerRef.code} — ${drug.manufacturerRef.name}`
+      : drug.manufacturer ?? null
+    return (
+      <div className="flex items-center gap-2">
+        <span className={display ? 'text-slate-900 text-sm' : 'text-slate-400 text-sm'}>
+          {display ?? '—'}
+        </span>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+          onClick={() => setEditing(true)}>
+          Edit
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Select value={selectedId} onValueChange={setSelectedId}>
+        <SelectTrigger className="w-64 h-8 text-sm">
+          <SelectValue placeholder="Select manufacturer…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">— None —</SelectItem>
+          {manufacturers.map(m => (
+            <SelectItem key={m.id} value={m.id}>{m.code} — {m.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" className="h-8" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save'}
+      </Button>
+      <Button size="sm" variant="outline" className="h-8" onClick={() => {
+        setSelectedId(drug.manufacturerId ?? '')
+        setEditing(false)
+      }}>
+        Cancel
+      </Button>
+    </div>
+  )
+}
+
+function DetailsTab({ drug, onRefresh }: { drug: Drug; onRefresh: (updated: Drug) => void }) {
   return (
     <div className="space-y-6">
       <div>
@@ -91,7 +175,10 @@ function DetailsTab({ drug }: { drug: Drug }) {
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <DetailRow label="Generic Name" value={drug.name} />
           <DetailRow label="Brand Name" value={drug.brandName} />
-          <DetailRow label="Manufacturer" value={drug.manufacturer} />
+          <div>
+            <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">Manufacturer</dt>
+            <dd className="mt-1"><ManufacturerEdit drug={drug} onSaved={onRefresh} /></dd>
+          </div>
           <DetailRow label="Category" value={drug.category} />
           <DetailRow label="Dosage Form" value={drug.dosageForm.replace(/_/g, ' ')} />
           <DetailRow label="Strength" value={drug.strength} />
@@ -146,6 +233,7 @@ function DetailsTab({ drug }: { drug: Drug }) {
     </div>
   )
 }
+
 
 function DiscountTab({ drugId, config: initialConfig }: { drugId: string; config: DrugDiscountConfig | null }) {
   const [config, setConfig] = useState(initialConfig)
@@ -497,7 +585,7 @@ export default function DrugDetailPage() {
 
         <TabsContent value="details">
           <div className="bg-white rounded-lg border border-slate-200 p-6">
-            <DetailsTab drug={drug} />
+            <DetailsTab drug={drug} onRefresh={(updated) => setDrug(updated as Drug)} />
           </div>
         </TabsContent>
 
