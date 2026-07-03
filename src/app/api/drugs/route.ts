@@ -34,6 +34,7 @@ export async function GET(req: Request) {
       where,
       include: {
         discountConfig: true,
+        manufacturerRef: { select: { id: true, code: true, name: true } },
       },
       orderBy: { name: 'asc' },
     })
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
           name: data.name,
           brandName: data.brandName,
           manufacturer: data.manufacturer,
+          manufacturerId: data.manufacturerId,
           category: data.category,
           dosageForm: data.dosageForm,
           strength: data.strength,
@@ -90,7 +92,10 @@ export async function POST(req: Request) {
 
       return tx.drug.findUnique({
         where: { id: created.id },
-        include: { discountConfig: true },
+        include: {
+          discountConfig: true,
+          manufacturerRef: { select: { id: true, code: true, name: true } },
+        },
       })
     })
 

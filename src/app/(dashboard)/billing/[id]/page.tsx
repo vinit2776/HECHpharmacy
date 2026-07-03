@@ -59,6 +59,7 @@ function ScheduleBadge({ schedule }: { schedule: string }) {
 interface BillItem {
   id: string
   drugName: string
+  manufacturerCode?: string | null
   schedule: string
   hsnCode?: string
   batchNo: string
@@ -370,6 +371,11 @@ export default function BillDetailPage() {
                       <span className="font-medium text-slate-900">{item.drugName}</span>
                       <ScheduleBadge schedule={item.schedule} />
                     </div>
+                    {item.manufacturerCode && (
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                        {item.manufacturerCode}
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 py-2 text-center text-xs text-slate-500 font-mono">
                     {item.hsnCode || '—'}
@@ -498,9 +504,10 @@ export default function BillDetailPage() {
               },
               doctor: bill.doctor ? { name: bill.doctor.name } : undefined,
               items: bill.items.map((item) => ({
-                drugName:      item.drugName,
-                schedule:      item.schedule,
-                hsnCode:       item.hsnCode,
+                drugName:         item.drugName,
+                manufacturerCode: item.manufacturerCode,
+                schedule:         item.schedule,
+                hsnCode:          item.hsnCode,
                 batchNo:       item.batchNo,
                 expiryDate:    item.expiryDate
                   ? format(new Date(item.expiryDate), 'MM/yy')

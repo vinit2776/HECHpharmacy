@@ -92,7 +92,12 @@ export default function DrugsPage() {
       <PageHeader
         title="Drugs"
         action={
-          <Button onClick={() => router.push('/drugs/new')}>+ Add Drug</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/drugs/manufacturers')}>
+              Manufacturers
+            </Button>
+            <Button onClick={() => router.push('/drugs/new')}>+ Add Drug</Button>
+          </div>
         }
       />
 

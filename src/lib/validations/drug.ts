@@ -4,6 +4,7 @@ export const drugSchema = z.object({
   name: z.string().min(1, 'Drug name is required'),
   brandName: z.string().optional(),
   manufacturer: z.string().optional(),
+  manufacturerId: z.string().optional(),
   category: z.string().min(1, 'Category is required'),
   dosageForm: z.enum(['eye_drop', 'eye_ointment', 'oral_tablet', 'oral_syrup', 'injection', 'ointment', 'other']),
   strength: z.string().optional(),

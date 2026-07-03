@@ -71,10 +71,11 @@ export interface BillPDFProps {
     prescriptionNo?: string
     paymentMode:    string
     items: Array<{
-      drugName:      string
-      schedule:      string
-      hsnCode?:      string
-      batchNo:       string
+      drugName:         string
+      manufacturerCode?: string | null
+      schedule:         string
+      hsnCode?:         string
+      batchNo:          string
       expiryDate:    string
       quantity:      number
       mrpPerUnit:    number
@@ -364,6 +365,11 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                       }}>
                         {scheduleLabels[item.schedule.toLowerCase()] ?? item.schedule.toUpperCase()}
                       </span>
+                    )}
+                    {item.manufacturerCode && (
+                      <div style={{ fontSize: '9px', color: '#64748b', marginTop: '1px' }}>
+                        Mfr: {item.manufacturerCode}
+                      </div>
                     )}
                   </TD>
                   <TD center small>{item.hsnCode ?? '—'}</TD>
