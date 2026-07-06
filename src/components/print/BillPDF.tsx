@@ -324,6 +324,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
             <colgroup>
               <col style={{ width: '22px' }} />   {/* S.No */}
               <col />                              {/* Description */}
+              <col style={{ width: '38px' }} />   {/* MFR */}
               <col style={{ width: '52px' }} />   {/* HSN/SAC */}
               <col style={{ width: '44px' }} />   {/* Batch */}
               <col style={{ width: '28px' }} />   {/* Exp */}
@@ -338,6 +339,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               <tr>
                 <TH center>S.No</TH>
                 <TH>Description &amp; Packing</TH>
+                <TH center>MFR</TH>
                 <TH center>HSN /<br />SAC</TH>
                 <TH center>Batch<br />No.</TH>
                 <TH center>Exp</TH>
@@ -364,12 +366,8 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                         {scheduleLabels[item.schedule.toLowerCase()] ?? item.schedule.toUpperCase()}
                       </span>
                     )}
-                    {item.manufacturerCode && (
-                      <div style={{ fontSize: '9px', color: '#64748b', marginTop: '1px' }}>
-                        Mfr: {item.manufacturerCode}
-                      </div>
-                    )}
                   </TD>
+                  <TD center small>{item.manufacturerCode ?? '—'}</TD>
                   <TD center small>{item.hsnCode ?? '—'}</TD>
                   <TD center small style={{ fontFamily: 'monospace' }}>{item.batchNo}</TD>
                   <TD center small>{item.expiryDate}</TD>

@@ -273,14 +273,14 @@ export default function PharmacySettingsPage() {
           label="Phone"
           type="tel"
           inputMode="numeric"
-          maxLength={10}
+          maxLength={15}
           value={form.phone}
           onChange={(e) => {
-            const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 15)
             setForm((prev) => ({ ...prev, phone: digits }))
             setDirty(true)
           }}
-          placeholder="10-digit mobile number"
+          placeholder="Phone number (up to 15 digits)"
         />
         <Field
           label="Email"
