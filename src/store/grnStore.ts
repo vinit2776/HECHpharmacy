@@ -18,6 +18,7 @@ export interface GrnLineItem {
   gstRate: number
   gstAmount: number
   lineTotal: number
+  effectivePurchaseRate: number
   coldChainVerified?: boolean
   notes?: string
 }

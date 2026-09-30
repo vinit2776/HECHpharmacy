@@ -36,6 +36,14 @@ export async function POST(
       for (const item of grn.items) {
         const totalQty = item.quantity + (item.freeQuantity ?? 0)
 
+        // Use effective rate (cost spread over billed + free units) so that
+        // COGS and gross margin reports reflect true purchase economics.
+        // If no free qty, effective rate equals the list purchase rate.
+        const discountedRate = Number(item.purchaseRatePerUnit) * (1 - Number(item.tradeDiscountPct ?? 0) / 100)
+        const effectiveRate = totalQty > 0
+          ? (discountedRate * item.quantity) / totalQty
+          : discountedRate
+
         await tx.inventoryBatch.create({
           data: {
             drugId: item.drugId,
@@ -43,7 +51,7 @@ export async function POST(
             manufacturedDate: item.manufacturedDate ?? null,
             expiryDate: item.expiryDate,
             mrpPerUnit: item.mrpPerUnit,
-            purchaseRatePerUnit: item.purchaseRatePerUnit,
+            purchaseRatePerUnit: Math.round(effectiveRate * 10000) / 10000,
             quantityReceived: totalQty,
             quantityAvailable: totalQty,
             supplierId: grn.supplierId,

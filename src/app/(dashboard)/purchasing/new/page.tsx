@@ -159,6 +159,7 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
       gstRate: Number(drug.gstRate),
       gstAmount: 0,
       lineTotal: 0,
+      effectivePurchaseRate: 0,
       coldChainVerified: undefined as boolean | undefined,
     }
     addItem(newItem)
@@ -170,12 +171,18 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
 
   function recalcItem(index: number, updates: any) {
     const item = { ...draft.items[index], ...updates }
-    const baseAmt = item.mrpPerUnit * item.quantity
     const discountedRate = item.purchaseRatePerUnit * (1 - item.tradeDiscountPct / 100)
-    const lineBeforeGst = discountedRate * (item.quantity + item.freeQuantity)
+    const lineBeforeGst = discountedRate * item.quantity          // only billed qty → matches vendor invoice
     const gstAmount = lineBeforeGst * item.gstRate / 100
     const lineTotal = lineBeforeGst + gstAmount
-    updateItem(index, { ...updates, gstAmount: Math.round(gstAmount * 100) / 100, lineTotal: Math.round(lineTotal * 100) / 100 })
+    const totalQty = item.quantity + (item.freeQuantity ?? 0)
+    const effectivePurchaseRate = totalQty > 0 ? lineBeforeGst / totalQty : discountedRate
+    updateItem(index, {
+      ...updates,
+      gstAmount: Math.round(gstAmount * 100) / 100,
+      lineTotal: Math.round(lineTotal * 100) / 100,
+      effectivePurchaseRate: Math.round(effectivePurchaseRate * 100) / 100,
+    })
   }
 
   function expiryWarning(expiryDate: string) {
@@ -280,7 +287,15 @@ function Step2({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                  <div className="text-xs text-slate-500">GST {item.gstRate}%: {formatCurrency(item.gstAmount)}</div>
+                  <div className="text-xs text-slate-500 space-y-0.5">
+                    <div>GST {item.gstRate}%: {formatCurrency(item.gstAmount)}</div>
+                    {item.freeQuantity > 0 && (
+                      <div className="text-blue-600">
+                        Effective rate: {formatCurrency(item.effectivePurchaseRate)}/unit
+                        <span className="text-slate-400 ml-1">(cost spread over {item.quantity + item.freeQuantity} units)</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="text-sm font-semibold">Line Total: {formatCurrency(item.lineTotal)}</div>
                 </div>
 
@@ -466,6 +481,7 @@ export default function NewGrnPage() {
             gstRate: i.gstRate,
             gstAmount: i.gstAmount,
             lineTotal: i.lineTotal,
+            effectivePurchaseRate: i.effectivePurchaseRate,
             coldChainVerified: i.coldChainVerified,
           })),
         }),
