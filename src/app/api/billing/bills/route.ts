@@ -21,7 +21,8 @@ export async function GET(req: Request) {
     if (search) {
       where.OR = [
         { billNumber: { contains: search, mode: 'insensitive' } },
-        { patientName: { contains: search, mode: 'insensitive' } },
+        { walkinName: { contains: search, mode: 'insensitive' } },
+        { patient: { name: { contains: search, mode: 'insensitive' } } },
       ]
     }
 
