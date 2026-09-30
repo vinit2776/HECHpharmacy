@@ -210,7 +210,7 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
 
         <div
           ref={ref}
-          className={`bill-print-root bg-white text-slate-900 font-sans text-[11px] leading-snug w-[190mm] mx-auto ${className ?? ''}`}
+          className={`bill-print-root bg-white text-slate-900 font-sans text-[12px] leading-snug w-[190mm] mx-auto ${className ?? ''}`}
         >
           {/* ── 1. HOSPITAL HEADER ───────────────────────────────────────── */}
           <table style={tableStyle}>
@@ -326,8 +326,8 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
               <col />                              {/* Description */}
               <col style={{ width: '38px' }} />   {/* MFR */}
               <col style={{ width: '52px' }} />   {/* HSN/SAC */}
-              <col style={{ width: '44px' }} />   {/* Batch */}
-              <col style={{ width: '28px' }} />   {/* Exp */}
+              <col style={{ width: '56px' }} />   {/* Batch */}
+              <col style={{ width: '42px' }} />   {/* Exp */}
               <col style={{ width: '24px' }} />   {/* Qty */}
               <col style={{ width: '56px' }} />   {/* Rate (MRP) */}
               <col style={{ width: '28px' }} />   {/* Dis */}
@@ -368,9 +368,9 @@ export const BillPDF = React.forwardRef<HTMLDivElement, BillPDFProps>(
                     )}
                   </TD>
                   <TD center small>{item.manufacturerCode ?? '—'}</TD>
-                  <TD center small>{item.hsnCode ?? '—'}</TD>
-                  <TD center small style={{ fontFamily: 'monospace' }}>{item.batchNo}</TD>
-                  <TD center small>{item.expiryDate}</TD>
+                  <TD center>{item.hsnCode ?? '—'}</TD>
+                  <TD center style={{ fontFamily: 'monospace' }}>{item.batchNo}</TD>
+                  <TD center>{item.expiryDate}</TD>
                   <TD center>{item.quantity}</TD>
                   <TD right style={{ fontVariantNumeric: 'tabular-nums' }}>{inr(item.mrpPerUnit)}</TD>
                   <TD right>
